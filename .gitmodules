@@ -1,0 +1,4 @@
+[submodule "third_party/custom_bootloader"]
+	path = third_party/custom_bootloader
+	url = https://github.com/hwnBEAST/stm32_bootloader
+	branch = user_app
