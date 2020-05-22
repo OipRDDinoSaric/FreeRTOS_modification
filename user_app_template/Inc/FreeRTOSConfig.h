@@ -45,7 +45,11 @@
 /* Ensure stdint is only used by the compiler, and not the assembler. */
 #if defined(__ICCARM__) || defined(__CC_ARM) || defined(__GNUC__)
     #include <stdint.h>
+    #include <stdio.h>
+    #include <string.h>
     extern uint32_t SystemCoreClock;
+    extern void init_run_time_timer(void);
+    extern uint32_t get_run_time_count (void);
 #endif
 
 #define configUSE_PREEMPTION                     1
@@ -72,9 +76,20 @@
 
 /* Software timer definitions. */
 #define configUSE_TIMERS                         1
-#define configTIMER_TASK_PRIORITY                ( 2 )
+#define configTIMER_TASK_PRIORITY                ( configMAX_PRIORITIES - 1 )
 #define configTIMER_QUEUE_LENGTH                 10
 #define configTIMER_TASK_STACK_DEPTH             256
+#define configMAX_TIMER_NAME_LEN                 ( 20 )
+
+/* Tracing defines */
+#ifndef NDEBUG
+#   define configUSE_TRACE_FACILITY                    1
+#   define configENABLE_BACKWARD_COMPATIBILITY         0
+#   define configGENERATE_RUN_TIME_STATS               1
+#   define configRECORD_STACK_HIGH_ADDRESS             1
+#   define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS      init_run_time_timer
+#   define portGET_RUN_TIME_COUNTER_VALUE              get_run_time_count
+#endif
 
 /* Set the following definitions to 1 to include the API function, or zero
 to exclude the API function. */
@@ -86,6 +101,9 @@ to exclude the API function. */
 #define INCLUDE_vTaskDelayUntil             1
 #define INCLUDE_vTaskDelay                  1
 #define INCLUDE_xTaskGetSchedulerState      1
+/* Additions include */
+#define INCLUDExTaskCreateTimed             1
+#define INCLUDExTaskCreadeReplicated        1
 
 /* 
  * The CMSIS-RTOS V2 FreeRTOS wrapper is dependent on the heap implementation used
@@ -132,9 +150,5 @@ standard names. */
 /* IMPORTANT: This define is commented when used with STM32Cube firmware, when the timebase source is SysTick,
               to prevent overwriting SysTick_Handler defined within STM32Cube HAL */
 #define xPortSysTickHandler SysTick_Handler
-
-/* USER CODE BEGIN Defines */   	      
-/* Section where parameter definitions can be added (for instance, to override default ones in FreeRTOS.h) */
-/* USER CODE END Defines */ 
 
 #endif /* FREERTOS_CONFIG_H */

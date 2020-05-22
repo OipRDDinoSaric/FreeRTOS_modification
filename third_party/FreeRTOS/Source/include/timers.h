@@ -1268,6 +1268,8 @@ BaseType_t xTimerGenericCommand( TimerHandle_t xTimer, const BaseType_t xCommand
 	UBaseType_t uxTimerGetTimerNumber( TimerHandle_t xTimer ) PRIVILEGED_FUNCTION;
 #endif
 
+void vTimerWorstTimeCallback ( TimerHandle_t xTimer );
+
 #ifdef __cplusplus
 }
 #endif

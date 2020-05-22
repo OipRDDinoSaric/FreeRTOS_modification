@@ -66,6 +66,10 @@ typedef void * TaskHandle_t;
  */
 typedef BaseType_t (*TaskHookFunction_t)( void * );
 
+/* Prototype of a function to call when timer expires
+ * xTimer is a handle of the timer */
+typedef void (*WorstTimeTimerCb_t)( void * xTimer );
+
 /* Task states returned by eTaskGetState. */
 typedef enum
 {
@@ -325,6 +329,21 @@ is used in assert() statements. */
 							UBaseType_t uxPriority,
 							TaskHandle_t * const pxCreatedTask ) PRIVILEGED_FUNCTION;
 #endif
+
+// TODO Description
+#if( configSUPPORT_DYNAMIC_ALLOCATION == 1 )
+    BaseType_t xTaskCreateTimed( TaskFunction_t pxTaskCode,
+                            const char * const pcName,
+                            const configSTACK_DEPTH_TYPE usStackDepth,
+                            void * const pvParameters,
+                            UBaseType_t uxPriority,
+                            TaskHandle_t * const pxCreatedTask,
+                            TickType_t xWorstRunTime,
+                            WorstTimeTimerCb_t pxTimerCallback );
+#endif
+
+// TODO Description
+void vTaskTimedReset(void * pxTaskHandle);
 
 /**
  * task. h

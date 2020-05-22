@@ -67,7 +67,7 @@ defining trmTIMER_SERVICE_TASK_NAME in FreeRTOSConfig.h. */
 /* The definition of the timers themselves. */
 typedef struct tmrTimerControl
 {
-	const char				*pcTimerName;		/*<< Text name.  This is not used by the kernel, it is included simply to make debugging easier. */ /*lint !e971 Unqualified char types are allowed for strings and single characters only. */
+	char				    pcTimerName [ configMAX_TIMER_NAME_LEN ];    /*<< Text name.  This is not used by the kernel, it is included simply to make debugging easier. */ /*lint !e971 Unqualified char types are allowed for strings and single characters only. */
 	ListItem_t				xTimerListItem;		/*<< Standard linked list item as used by all kernel features for event management. */
 	TickType_t				xTimerPeriodInTicks;/*<< How quickly and often the timer expires. */
 	UBaseType_t				uxAutoReload;		/*<< Set to pdTRUE if the timer should be automatically restarted once expired.  Set to pdFALSE if the timer is, in effect, a one-shot timer. */
@@ -366,8 +366,24 @@ static void prvInitialiseNewTimer(	const char * const pcTimerName,			/*lint !e97
 		prvCheckForValidListAndQueue();
 
 		/* Initialise the timer structure members using the function
-		parameters. */
-		pxNewTimer->pcTimerName = pcTimerName;
+		   parameters. */
+		/* Store the timer name in timer handle. */
+        for( UBaseType_t iii = 0; iii < ( UBaseType_t ) configMAX_TIMER_NAME_LEN; iii++ )
+        {
+            pxNewTimer->pcTimerName[ iii ] = pcTimerName[ iii ];
+
+            /* Don't copy all configMAX_TIMER_NAME_LEN if the string is shorter than
+            configMAX_TIMER_NAME_LEN characters just in case the memory after the
+            string is not accessible (extremely unlikely). */
+            if( pcTimerName[ iii ] == 0x00 )
+            {
+                break;
+            }
+        }
+        /* Ensure the name string is terminated in the case that the string length
+        was greater or equal to configMAX_TIMER_NAME_LEN. */
+        pxNewTimer->pcTimerName[ configMAX_TIMER_NAME_LEN - 1 ] = '\0';
+
 		pxNewTimer->xTimerPeriodInTicks = xTimerPeriodInTicks;
 		pxNewTimer->uxAutoReload = uxAutoReload;
 		pxNewTimer->pvTimerID = pvTimerID;
@@ -1065,6 +1081,30 @@ Timer_t * const pxTimer = ( Timer_t * ) xTimer;
 	}
 
 #endif /* configUSE_TRACE_FACILITY */
+/*-----------------------------------------------------------*/
+
+void vTimerWorstTimeCallback ( TimerHandle_t xTimer )
+{
+#   if 0 /* Do NOT change this #if, it is a demonstration of how a user can
+            define it's function to check what timer and task overflowed */
+    {
+        configASSERT(strncmp( pcTimerGetName( xTimer ), "WorstTimeTimer",
+                strlen( "WorstTimeTimer" ) ) != 0);
+
+#       ifndef NDEBUG
+        {
+            void * ph_owner_task = pvTimerGetTimerID( xTimer );
+            printf("Timer %s overflowed\n", pcTimerGetName( xTimer ));
+            printf("Task %s overflowed\n", pcTaskGetName( ph_owner_task ));
+        }
+#       endif
+    }
+#   endif
+
+    for( ;; );
+    /* Block indefinitely as a timed task's time overflowed */
+}
+
 /*-----------------------------------------------------------*/
 
 /* This entire source file will be skipped if the application is not configured

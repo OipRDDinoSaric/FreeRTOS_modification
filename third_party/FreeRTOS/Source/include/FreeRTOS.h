@@ -1027,6 +1027,10 @@ typedef struct xSTATIC_TCB
 		uint8_t ucDummy21;
 	#endif
 
+	uint8_t     ucDummy22;
+
+	void        *xDummy23;
+
 } StaticTask_t;
 
 /*

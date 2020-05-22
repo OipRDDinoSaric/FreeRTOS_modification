@@ -69,6 +69,11 @@ functions but without including stdio.h here. */
 #define taskWAITING_NOTIFICATION		( ( uint8_t ) 1 )
 #define taskNOTIFICATION_RECEIVED		( ( uint8_t ) 2 )
 
+/* Macros for determining task type */
+#define taskTYPE_DEFAULT             ( ( uint8_t ) 0 )
+#define taskTYPE_TIMED               ( ( uint8_t ) 1 )
+#define taskTYPE_REPLICATED          ( ( uint8_t ) 2 )
+
 /*
  * The value used to fill the stack of a task when the task is created.  This
  * is used purely for checking the high water mark for tasks.
@@ -336,6 +341,10 @@ typedef struct tskTaskControlBlock
 		uint8_t ucDelayAborted;
 	#endif
 
+	uint8_t ucTaskType; /*< TCB can be defined as default, timed and replicated depending on redundancy chosen */
+
+	TimerHandle_t xWorstTimeTimer; /*< Timer used for tracking the worst time of execution */
+
 } tskTCB;
 
 /* The old tskTCB name is maintained above then typedefed to the new TCB_t name
@@ -393,8 +402,20 @@ PRIVILEGED_DATA static volatile UBaseType_t uxSchedulerSuspended	= ( UBaseType_t
 #if ( configGENERATE_RUN_TIME_STATS == 1 )
 
 	PRIVILEGED_DATA static uint32_t ulTaskSwitchedInTime = 0UL;	/*< Holds the value of a timer/counter the last time a task was switched in. */
-	PRIVILEGED_DATA static uint32_t ulTotalRunTime = 0UL;		/*< Holds the total amount of execution time as defined by the run time counter clock. */
 
+    /*-----------------------------------------------------------*/
+    /* Modification that deals with optimization of this variable when
+     * generating runtime statistics */
+    #if 1
+      PRIVILEGED_DATA static
+      #ifdef __GNUC__
+      __attribute__((used))
+      #endif
+      uint32_t ulTotalRunTime = 0UL;   /*< Holds the total amount of execution time as defined by the run time counter clock. */
+    #else
+      PRIVILEGED_DATA static uint32_t ulTotalRunTime = 0UL;   /*< Holds the total amount of execution time as defined by the run time counter clock. */
+    #endif
+    /*-----------------------------------------------------------*/
 #endif
 
 /*lint -restore */
@@ -539,17 +560,37 @@ static void prvResetNextTaskUnblockTime( void );
 #endif
 
 /*
+ * Called by all dynamically allocated tasks to initialize the task. Allocates
+ * the memory and calls the initialize TCB function
+ */
+#if configSUPPORT_DYNAMIC_ALLOCATION
+    BaseType_t prvTaskCreateGeneric( TaskFunction_t pxTaskCode,
+                                     const char * const pcName,     /*lint !e971 Unqualified char types are allowed for strings and single characters only. */
+                                     const configSTACK_DEPTH_TYPE usStackDepth,
+                                     void * const pvParameters,
+                                     UBaseType_t uxPriority,
+                                     TaskHandle_t * const pxCreatedTask,
+                                     uint8_t ucTaskType,
+                                     TickType_t xWorstRunTime,
+                                     WorstTimeTimerCb_t pxTimerCallback );
+#endif
+
+
+/*
  * Called after a Task_t structure has been allocated either statically or
  * dynamically to fill in the structure's members.
  */
-static void prvInitialiseNewTask( 	TaskFunction_t pxTaskCode,
-									const char * const pcName, 		/*lint !e971 Unqualified char types are allowed for strings and single characters only. */
-									const uint32_t ulStackDepth,
-									void * const pvParameters,
-									UBaseType_t uxPriority,
-									TaskHandle_t * const pxCreatedTask,
-									TCB_t *pxNewTCB,
-									const MemoryRegion_t * const xRegions ) PRIVILEGED_FUNCTION;
+static void prvInitialiseNewTask(   TaskFunction_t pxTaskCode,
+                                    const char * const pcName,      /*lint !e971 Unqualified char types are allowed for strings and single characters only. */
+                                    const uint32_t ulStackDepth,
+                                    void * const pvParameters,
+                                    UBaseType_t uxPriority,
+                                    TaskHandle_t * const pxCreatedTask,
+                                    TCB_t *pxNewTCB,
+                                    const MemoryRegion_t * const xRegions,
+                                    uint8_t ucTaskType,
+                                    TickType_t xWorstRunTime,
+                                    WorstTimeTimerCb_t pxTimerCallback ) PRIVILEGED_FUNCTION;
 
 /*
  * Called after a new task has been created and initialised to place the task
@@ -612,7 +653,17 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB ) PRIVILEGED_FUNCTION;
 			}
 			#endif /* configSUPPORT_DYNAMIC_ALLOCATION */
 
-			prvInitialiseNewTask( pxTaskCode, pcName, ulStackDepth, pvParameters, uxPriority, &xReturn, pxNewTCB, NULL );
+			prvInitialiseNewTask( pxTaskCode,
+			                      pcName,
+			                      ulStackDepth,
+			                      pvParameters,
+			                      uxPriority,
+			                      &xReturn,
+			                      pxNewTCB,
+			                      NULL,
+			                      taskTYPE_DEFAULT,
+			                      0,
+			                      NULL );
 			prvAddNewTaskToReadyList( pxNewTCB );
 		}
 		else
@@ -723,12 +774,33 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB ) PRIVILEGED_FUNCTION;
 
 #if( configSUPPORT_DYNAMIC_ALLOCATION == 1 )
 
-	BaseType_t xTaskCreate(	TaskFunction_t pxTaskCode,
-							const char * const pcName,		/*lint !e971 Unqualified char types are allowed for strings and single characters only. */
-							const configSTACK_DEPTH_TYPE usStackDepth,
-							void * const pvParameters,
-							UBaseType_t uxPriority,
-							TaskHandle_t * const pxCreatedTask )
+    BaseType_t xTaskCreate( TaskFunction_t pxTaskCode,
+                            const char * const pcName,      /*lint !e971 Unqualified char types are allowed for strings and single characters only. */
+                            const configSTACK_DEPTH_TYPE usStackDepth,
+                            void * const pvParameters,
+                            UBaseType_t uxPriority,
+                            TaskHandle_t * const pxCreatedTask )
+    {
+        return prvTaskCreateGeneric( pxTaskCode,
+                                     pcName,
+                                     usStackDepth,
+                                     pvParameters,
+                                     uxPriority,
+                                     pxCreatedTask,
+                                     taskTYPE_DEFAULT,
+                                     0,
+                                     NULL);
+    }
+
+	BaseType_t prvTaskCreateGeneric( TaskFunction_t pxTaskCode,
+							         const char * const pcName,		/*lint !e971 Unqualified char types are allowed for strings and single characters only. */
+							         const configSTACK_DEPTH_TYPE usStackDepth,
+							         void * const pvParameters,
+							         UBaseType_t uxPriority,
+							         TaskHandle_t * const pxCreatedTask,
+							         uint8_t ucTaskType,
+							         TickType_t xWorstRunTime,
+							         WorstTimeTimerCb_t pxTimerCallback )
 	{
 	TCB_t *pxNewTCB;
 	BaseType_t xReturn;
@@ -799,7 +871,17 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB ) PRIVILEGED_FUNCTION;
 			}
 			#endif /* configSUPPORT_STATIC_ALLOCATION */
 
-			prvInitialiseNewTask( pxTaskCode, pcName, ( uint32_t ) usStackDepth, pvParameters, uxPriority, pxCreatedTask, pxNewTCB, NULL );
+			prvInitialiseNewTask( pxTaskCode,
+			                      pcName,
+			                      ( uint32_t ) usStackDepth,
+			                      pvParameters,
+			                      uxPriority,
+			                      pxCreatedTask,
+			                      pxNewTCB,
+			                      NULL,
+			                      ucTaskType,
+			                      xWorstRunTime,
+			                      pxTimerCallback );
 			prvAddNewTaskToReadyList( pxNewTCB );
 			xReturn = pdPASS;
 		}
@@ -821,7 +903,10 @@ static void prvInitialiseNewTask( 	TaskFunction_t pxTaskCode,
 									UBaseType_t uxPriority,
 									TaskHandle_t * const pxCreatedTask,
 									TCB_t *pxNewTCB,
-									const MemoryRegion_t * const xRegions )
+									const MemoryRegion_t * const xRegions,
+									uint8_t ucTaskType,
+									TickType_t xWorstRunTime,
+									WorstTimeTimerCb_t pxTimerCallback )
 {
 StackType_t *pxTopOfStack;
 UBaseType_t x;
@@ -1005,6 +1090,43 @@ UBaseType_t x;
 	}
 	#endif /* portUSING_MPU_WRAPPERS */
 
+	/* Handles initialization of task type specific data */
+	switch( ucTaskType )
+	{
+
+	    case taskTYPE_TIMED:
+	    {
+	        static uint8_t ucWorstTimeTimerID = 0;
+	        char pcTimerName[18] = "WorstTimeTimer";
+	        char pcTimerID[4];
+
+	        utoa(ucWorstTimeTimerID,pcTimerID,10);
+	        strlcat(pcTimerName, pcTimerID, sizeof(pcTimerName));
+
+	        pxNewTCB->xWorstTimeTimer = xTimerCreate( pcTimerName,
+                                                      xWorstRunTime,
+                                                      pdTRUE,
+                                                      (void *) pxNewTCB,
+                                                      pxTimerCallback );
+            ucWorstTimeTimerID++;
+	    }
+	    break;
+
+	    case taskTYPE_REPLICATED:
+	    {
+
+	    }
+	    break;
+
+        case taskTYPE_DEFAULT:
+        default:
+        {
+        }
+        break;
+	}
+
+    pxNewTCB->ucTaskType = ucTaskType;
+
 	if( ( void * ) pxCreatedTask != NULL )
 	{
 		/* Pass the handle out in an anonymous way.  The handle can be used to
@@ -1016,8 +1138,8 @@ UBaseType_t x;
 		mtCOVERAGE_TEST_MARKER();
 	}
 }
-/*-----------------------------------------------------------*/
 
+/*-----------------------------------------------------------*/
 static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB )
 {
 	/* Ensure interrupts don't access the task lists while the lists are being
@@ -1168,6 +1290,13 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB )
 				/* Reset the next expected unblock time in case it referred to
 				the task that has just been deleted. */
 				prvResetNextTaskUnblockTime();
+			}
+
+			/* Let's delete the timer for tracing the worst time of the task
+			if it is being used */
+			if( pxTCB->xWorstTimeTimer != NULL )
+			{
+			    xTimerDelete( pxTCB->xWorstTimeTimer, portMAX_DELAY );
 			}
 
 			traceTASK_DELETE( pxTCB );
@@ -5013,6 +5142,46 @@ const TickType_t xConstTickCount = xTickCount;
 	}
 	#endif /* INCLUDE_vTaskSuspend */
 }
+
+/*-----------------------------------------------------------*/
+
+/* Code below is added as a modification for tracking worst time of execution
+of a task @ref Additions */
+
+#if( INCLUDExTaskCreateTimed == 1 )
+
+    BaseType_t xTaskCreateTimed( TaskFunction_t pxTaskCode,
+                            const char * const pcName,
+                            const configSTACK_DEPTH_TYPE usStackDepth,
+                            void * const pvParameters,
+                            UBaseType_t uxPriority,
+                            TaskHandle_t * const pxCreatedTask,
+                            TickType_t xWorstRunTime,
+                            WorstTimeTimerCb_t pxTimerCallback )
+    {
+
+        if( pxTimerCallback == NULL )
+        {
+            pxTimerCallback = vTimerWorstTimeCallback;
+        }
+
+        return prvTaskCreateGeneric(pxTaskCode, pcName, usStackDepth, pvParameters,
+                uxPriority, pxCreatedTask, taskTYPE_TIMED, xWorstRunTime, pxTimerCallback);
+    }
+#endif
+
+/*-----------------------------------------------------------*/
+
+void vTaskTimedReset(void * pxTaskHandle)
+{
+    TCB_t * pxTaskToTimeReset = prvGetTCBFromHandle(pxTaskHandle);
+
+    configASSERT( pxTaskToTimeReset->ucTaskType == taskTYPE_TIMED );
+
+    xTimerReset( pxTaskToTimeReset->xWorstTimeTimer, 0 );
+}
+
+/*-----------------------------------------------------------*/
 
 /* Code below here allows additional code to be inserted into this source file,
 especially where access to file scope functions and data is needed (for example
