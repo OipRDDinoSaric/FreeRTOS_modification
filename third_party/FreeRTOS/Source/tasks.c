@@ -5172,13 +5172,22 @@ of a task @ref Additions */
 
 /*-----------------------------------------------------------*/
 
-void vTaskTimedReset(void * pxTaskHandle)
+void vTaskTimedReset( TaskHandle_t pxTaskHandle )
 {
-    TCB_t * pxTaskToTimeReset = prvGetTCBFromHandle(pxTaskHandle);
+    TCB_t * pxTaskToTimeReset = prvGetTCBFromHandle( pxTaskHandle );
 
     configASSERT( pxTaskToTimeReset->ucTaskType == taskTYPE_TIMED );
 
     xTimerReset( pxTaskToTimeReset->xWorstTimeTimer, 0 );
+}
+
+/*-----------------------------------------------------------*/
+
+uint8_t ucTaskGetType( TaskHandle_t pxTaskHandle )
+{
+    TCB_t * pxTCB = prvGetTCBFromHandle( pxTaskHandle );
+    configASSERT( pxTCB );
+    return pxTCB->ucTaskType;
 }
 
 /*-----------------------------------------------------------*/

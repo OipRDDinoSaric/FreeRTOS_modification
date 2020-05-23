@@ -55,7 +55,7 @@ void user_app_template_run (void)
     xTaskCreateTimed(vTask3, "T3", configMINIMAL_STACK_SIZE, NULL, 1, NULL,
             pdMS_TO_TICKS(1001), timer_cb_fnc);
     xTaskCreateTimed(vTask4, "T4", configMINIMAL_STACK_SIZE, NULL, 1, NULL,
-            pdMS_TO_TICKS(2000), timer_cb_fnc);
+            pdMS_TO_TICKS(2001), timer_cb_fnc);
 
     /* Give control to FreeRTOS */
     vTaskStartScheduler();
@@ -69,6 +69,8 @@ void vTask1 (void *pvParameters)
 {
     for (;;)
     {
+        printf("Task type of task %s is %d\n", pcTaskGetName(NULL),
+            ucTaskGetType(NULL));
         HAL_GPIO_TogglePin(LED_RED_GPIO_Port, LED_RED_Pin);
         vTaskDelay(pdMS_TO_TICKS(2 * 1000));
     }
@@ -87,6 +89,8 @@ void vTask3 (void *pvParameters)
 {
     for (;;)
     {
+        printf("Task type of task %s is %d\n", pcTaskGetName(NULL),
+            ucTaskGetType(NULL));
         HAL_GPIO_TogglePin(LED_ORANGE_GPIO_Port, LED_ORANGE_Pin);
         vTaskDelay(pdMS_TO_TICKS(1 * 1000));
         vTaskTimedReset(NULL);

@@ -343,7 +343,10 @@ is used in assert() statements. */
 #endif
 
 // TODO Description
-void vTaskTimedReset(void * pxTaskHandle);
+void vTaskTimedReset( TaskHandle_t pxTaskHandle );
+
+// TODO Description
+uint8_t ucTaskGetType( TaskHandle_t pxTaskHandle );
 
 /**
  * task. h
