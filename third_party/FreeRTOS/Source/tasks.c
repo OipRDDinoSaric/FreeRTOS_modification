@@ -5422,17 +5422,39 @@ uint8_t ucTaskGetType( TaskHandle_t pxTaskHandle )
     void vTaskSyncAndCompare( const CompareValue_t xCompareValue )
     {
         TCB_t * pxTCB = prvGetTCBFromHandle( NULL );
+
         configASSERT( pxTCB );
         configASSERT( taskTYPE_REPLICATED == pxTCB->ucTaskType );
 
-        // check if all other tasks are blocked by this function
+        if( prvIsLastArrivedRedundantTask( pxTCB ) == pdTRUE )
+        {
+            uint8_t ucIsDeleteRequest = pdFALSE;
+            if( prvIsCompareValueSame( pxTCB )  == pdFALSE )
+            {
+                CompareValue_t * pxCompareValues = prvGetCompareValues( pxTCB );
 
-        // if yes compare values of all tasks
-            // if values match unblock all
-            // else if compare function returns pdTRUE delete all tasks
+                ucIsDeleteRequest = pxTCB->pxRedundantValueErrorCb(
+                                                  pxCompareValues,
+                                                  pxTCB->ucReplicatedTaskType );
+            }
 
-        // else
-            // block indefinitely
+            if( pdTRUE == ucIsDeleteRequest )
+            {
+                /* Delete is requested from mismatch callback, delete all
+                 * replicated tasks */
+                vTaskDelete( pxTCB );
+            }
+            else
+            {
+                prvUnblockReplicatedTasks( pxTCB );
+            }
+        }
+        else
+        {
+            pxTCB->ucIsWaitingOnCompare = pdTRUE;
+            prvBlockIndefinitely( pxTCB );
+            /* Never reached */
+        }
 
     }
 #endif
@@ -5449,6 +5471,8 @@ uint8_t ucTaskGetType( TaskHandle_t pxTaskHandle )
         pxTCB->xCompareValue = xNewCompareValue;
     }
 #endif
+
+/*-----------------------------------------------------------*/
 
 /*-----------------------------------------------------------*/
 /* Code below here allows additional code to be inserted into this source file,

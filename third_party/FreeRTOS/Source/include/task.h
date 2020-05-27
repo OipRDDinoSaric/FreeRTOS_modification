@@ -93,8 +93,11 @@ typedef BaseType_t (*TaskHookFunction_t)( void * );
      *
      * @param pxCompareValues  Array of compare values
      * @param ucLen            Number of elements in ppvCompareValue
+     *
+     * @ret   pdTRUE is returned to delete all replicated tasks, pdFALSE is
+     *        returned to unblock all replicated tasks
      */
-    typedef void (*RedundantValueErrorCb_t)( CompareValue_t * pxCompareValues, uint8_t ucLen );
+    typedef uint8_t (*RedundantValueErrorCb_t)( CompareValue_t * pxCompareValues, uint8_t ucLen );
 
 #endif
 
