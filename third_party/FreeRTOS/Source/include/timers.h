@@ -1268,6 +1268,10 @@ BaseType_t xTimerGenericCommand( TimerHandle_t xTimer, const BaseType_t xCommand
 	UBaseType_t uxTimerGetTimerNumber( TimerHandle_t xTimer ) PRIVILEGED_FUNCTION;
 #endif
 
+/*
+ * Used for default callback when creating timed task. Called when timed task
+ * doesn't refresh timer from counting out.
+ */
 void vTimerWorstTimeCallback ( TimerHandle_t xTimer );
 
 #ifdef __cplusplus

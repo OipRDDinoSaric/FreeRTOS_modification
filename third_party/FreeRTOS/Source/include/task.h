@@ -61,14 +61,42 @@ extern "C" {
 typedef void * TaskHandle_t;
 
 /*
+ * When using timed tasks this is the handle of timer used by the application
+ */
+typedef void * WorstTimeTimerHandle_t;
+
+/*
  * Defines the prototype to which the application task hook function must
  * conform.
  */
 typedef BaseType_t (*TaskHookFunction_t)( void * );
 
-/* Prototype of a function to call when timer expires
- * xTimer is a handle of the timer */
-typedef void (*WorstTimeTimerCb_t)( void * xTimer );
+#if( INCLUDExTaskCreateTimed == 1 )
+
+    /*
+     * Prototype of a function to call when timer expires
+     * xTimer is a handle of the timer.
+     */
+    typedef void (*WorstTimeTimerCb_t)( WorstTimeTimerHandle_t xTimer );
+
+#endif
+
+#if( INCLUDExTaskCreateReplicated == 1 )
+    /*
+     * Type from compare value when using replicated tasks
+     */
+    typedef uint32_t CompareValue_t;
+
+    /*
+     * Defines the prototype of the function to be called when redundant task's
+     * compare values are different
+     *
+     * @param pxCompareValues  Array of compare values
+     * @param ucLen            Number of elements in ppvCompareValue
+     */
+    typedef void (*RedundantValueErrorCb_t)( CompareValue_t * pxCompareValues, uint8_t ucLen );
+
+#endif
 
 /* Task states returned by eTaskGetState. */
 typedef enum
@@ -91,6 +119,10 @@ typedef enum
 	eSetValueWithoutOverwrite	/* Set the task's notification value if the previous value has been read by the task. */
 } eNotifyAction;
 
+/* Macro for replicated task type */
+#define taskREPLICATED_NO_RECOVERY ( ( uint8_t ) 2 )
+#define taskREPLICATED_RECOVERY    ( ( uint8_t ) 3 ) /*< Recovery is achieved by having three tasks,
+                                                         using 2 out of 3 logic for recovery on error */
 /*
  * Used internally only.
  */
@@ -331,7 +363,7 @@ is used in assert() statements. */
 #endif
 
 // TODO Description
-#if( configSUPPORT_DYNAMIC_ALLOCATION == 1 )
+#if( INCLUDExTaskCreateTimed == 1 )
     BaseType_t xTaskCreateTimed( TaskFunction_t pxTaskCode,
                             const char * const pcName,
                             const configSTACK_DEPTH_TYPE usStackDepth,
@@ -343,11 +375,25 @@ is used in assert() statements. */
 #endif
 
 // TODO Description
+#if( INCLUDExTaskCreateReplicated == 1 )
+    BaseType_t xTaskCreateReplicated( TaskFunction_t pxTaskCode,
+                            const char * const pcName,
+                            const configSTACK_DEPTH_TYPE usStackDepth,
+                            void * const pvParameters,
+                            UBaseType_t uxPriority,
+                            TaskHandle_t * const pxCreatedTask,
+                            uint8_t ucReplicatedType,
+                            RedundantValueErrorCb_t pxRedundantValueErrorCb );
+#endif
+
+// TODO Description
 void vTaskTimedReset( TaskHandle_t pxTaskHandle );
 
 // TODO Description
 uint8_t ucTaskGetType( TaskHandle_t pxTaskHandle );
 
+// TODO Description
+void vTaskSyncAndCompare( const CompareValue_t xCompareValue );
 /**
  * task. h
  *<pre>

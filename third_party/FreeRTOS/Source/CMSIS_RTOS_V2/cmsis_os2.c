@@ -1831,11 +1831,21 @@ osStatus_t osMessageQueueDelete (osMessageQueueId_t mq_id) {
 /*---------------------------------------------------------------------------*/
 
 /* Callback function prototypes */
+#if (configUSE_IDLE_HOOK == 1)
 extern void vApplicationIdleHook (void);
+#endif
+#if (configUSE_TICK_HOOK == 1)
 extern void vApplicationTickHook (void);
+#endif
+#if (configUSE_MALLOC_FAILED_HOOK == 1)
 extern void vApplicationMallocFailedHook (void);
+#endif
+#if (configUSE_DAEMON_TASK_STARTUP_HOOK == 1)
 extern void vApplicationDaemonTaskStartupHook (void);
+#endif
+#if (configCHECK_FOR_STACK_OVERFLOW > 0)
 extern void vApplicationStackOverflowHook (TaskHandle_t xTask, signed char *pcTaskName);
+#endif
 
 /**
   Dummy implementation of the callback function vApplicationIdleHook().

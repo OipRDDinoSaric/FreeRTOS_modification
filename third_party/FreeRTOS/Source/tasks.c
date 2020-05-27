@@ -70,9 +70,9 @@ functions but without including stdio.h here. */
 #define taskNOTIFICATION_RECEIVED		( ( uint8_t ) 2 )
 
 /* Macros for determining task type */
-#define taskTYPE_DEFAULT             ( ( uint8_t ) 0 )
-#define taskTYPE_TIMED               ( ( uint8_t ) 1 )
-#define taskTYPE_REPLICATED          ( ( uint8_t ) 2 )
+#define taskTYPE_DEFAULT                ( ( uint8_t ) 0 )
+#define taskTYPE_TIMED                  ( ( uint8_t ) 1 )
+#define taskTYPE_REPLICATED             ( ( uint8_t ) 2 )
 
 /*
  * The value used to fill the stack of a task when the task is created.  This
@@ -341,10 +341,19 @@ typedef struct tskTaskControlBlock
 		uint8_t ucDelayAborted;
 	#endif
 
-	uint8_t ucTaskType; /*< TCB can be defined as default, timed and replicated depending on redundancy chosen */
+    uint8_t ucTaskType; /*< TCB can be defined as default, timed and replicated depending on redundancy chosen, as defined by taskTYPE_...*/
 
-	TimerHandle_t xWorstTimeTimer; /*< Timer used for tracking the worst time of execution */
+    #if ( INCLUDExTaskCreateTimed == 1 )
+        TimerHandle_t xWorstTimeTimer; /*< Timer used for tracking the worst time of execution */
+    #endif
 
+    #if ( INCLUDExTaskCreateReplicated == 1 )
+        uint8_t ucIsWaitingOnCompare; /*< Boolean value used to signalize task it is waiting for comparison of tasks */
+        TaskHandle_t pxNextTaskHandle; /*< When using replicated tasks points to next task in replicated group, 1->2->3->1... */
+        CompareValue_t xCompareValue; /*< Value to compare with other tasks */
+        RedundantValueErrorCb_t pxRedundantValueErrorCb; /*< Callback that is used when redundant task's values don't match */
+        uint8_t ucReplicatedTaskType; /*< Defines number of redundant tasks. Valid 2 or 3 */
+    #endif
 } tskTCB;
 
 /* The old tskTCB name is maintained above then typedefed to the new TCB_t name
@@ -572,7 +581,8 @@ static void prvResetNextTaskUnblockTime( void );
                                      TaskHandle_t * const pxCreatedTask,
                                      uint8_t ucTaskType,
                                      TickType_t xWorstRunTime,
-                                     WorstTimeTimerCb_t pxTimerCallback );
+                                     WorstTimeTimerCb_t pxTimerCallback,
+                                     RedundantValueErrorCb_t pxRedundantValueErrorCb );
 #endif
 
 
@@ -590,7 +600,8 @@ static void prvInitialiseNewTask(   TaskFunction_t pxTaskCode,
                                     const MemoryRegion_t * const xRegions,
                                     uint8_t ucTaskType,
                                     TickType_t xWorstRunTime,
-                                    WorstTimeTimerCb_t pxTimerCallback ) PRIVILEGED_FUNCTION;
+                                    WorstTimeTimerCb_t pxTimerCallback,
+                                    RedundantValueErrorCb_t pxRedundantValueErrorCb ) PRIVILEGED_FUNCTION;
 
 /*
  * Called after a new task has been created and initialised to place the task
@@ -598,6 +609,30 @@ static void prvInitialiseNewTask(   TaskFunction_t pxTaskCode,
  */
 static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB ) PRIVILEGED_FUNCTION;
 
+#if( INCLUDExTaskCreateReplicated == 1 )
+    /*
+     * Sets the handle of next replicated task when using task replication
+     */
+    static void prvSetNextReplicatedTask( TaskHandle_t pxTaskHandle,
+        TaskHandle_t const pxNewNextTaskHandle );
+#endif
+
+#if( INCLUDExTaskCreateReplicated == 1 )
+    /*
+     * Sets the type of replicated task when task replication is used
+     */
+    static void prvSetReplicatedTaskType( TaskHandle_t pxTaskHandle,
+        const uint8_t ucNewReplicatedTaskType );
+#endif
+
+#if( INCLUDExTaskCreateReplicated == 1 )
+    /*
+     * Sets the compare value of TCB when replicated tasks are used.
+     * Compare values are used to check if two tasks give the same output.
+     */
+    void prvSetCompareValue( TaskHandle_t pxTaskHandle,
+                               const CompareValue_t xNewCompareValue );
+#endif
 /*
  * freertos_tasks_c_additions_init() should only be called if the user definable
  * macro FREERTOS_TASKS_C_ADDITIONS_INIT() is defined, as that is the only macro
@@ -663,6 +698,7 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB ) PRIVILEGED_FUNCTION;
 			                      NULL,
 			                      taskTYPE_DEFAULT,
 			                      0,
+			                      NULL,
 			                      NULL );
 			prvAddNewTaskToReadyList( pxNewTCB );
 		}
@@ -789,7 +825,8 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB ) PRIVILEGED_FUNCTION;
                                      pxCreatedTask,
                                      taskTYPE_DEFAULT,
                                      0,
-                                     NULL);
+                                     NULL,
+                                     NULL );
     }
 
 	BaseType_t prvTaskCreateGeneric( TaskFunction_t pxTaskCode,
@@ -800,7 +837,9 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB ) PRIVILEGED_FUNCTION;
 							         TaskHandle_t * const pxCreatedTask,
 							         uint8_t ucTaskType,
 							         TickType_t xWorstRunTime,
-							         WorstTimeTimerCb_t pxTimerCallback )
+							         WorstTimeTimerCb_t pxTimerCallback,
+							         RedundantValueErrorCb_t pxRedundantValueErrorCb
+							         )
 	{
 	TCB_t *pxNewTCB;
 	BaseType_t xReturn;
@@ -881,7 +920,8 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB ) PRIVILEGED_FUNCTION;
 			                      NULL,
 			                      ucTaskType,
 			                      xWorstRunTime,
-			                      pxTimerCallback );
+			                      pxTimerCallback,
+			                      pxRedundantValueErrorCb );
 			prvAddNewTaskToReadyList( pxNewTCB );
 			xReturn = pdPASS;
 		}
@@ -906,7 +946,8 @@ static void prvInitialiseNewTask( 	TaskFunction_t pxTaskCode,
 									const MemoryRegion_t * const xRegions,
 									uint8_t ucTaskType,
 									TickType_t xWorstRunTime,
-									WorstTimeTimerCb_t pxTimerCallback )
+									WorstTimeTimerCb_t pxTimerCallback,
+									RedundantValueErrorCb_t pxRedundantValueErrorCb )
 {
 StackType_t *pxTopOfStack;
 UBaseType_t x;
@@ -1109,18 +1150,37 @@ UBaseType_t x;
                                                       (void *) pxNewTCB,
                                                       pxTimerCallback );
             ucWorstTimeTimerID++;
+
+            /* Set unused handle values to default value */
+            pxNewTCB->ucIsWaitingOnCompare = pdFALSE;
+            pxNewTCB->pxNextTaskHandle = NULL;
+            pxNewTCB->xCompareValue = 0;
+            pxNewTCB->pxRedundantValueErrorCb = NULL;
+            pxNewTCB->ucReplicatedTaskType = pdFALSE;
 	    }
 	    break;
 
 	    case taskTYPE_REPLICATED:
 	    {
+	        pxNewTCB->ucIsWaitingOnCompare = pdFALSE;
+	        pxNewTCB->pxRedundantValueErrorCb = pxRedundantValueErrorCb;
 
+            /* Set unused handle values to default value */
+            pxNewTCB->xWorstTimeTimer = NULL;
 	    }
 	    break;
 
         case taskTYPE_DEFAULT:
         default:
         {
+            /* Set unused handle values to default value */
+            pxNewTCB->xWorstTimeTimer = NULL;
+
+            pxNewTCB->ucIsWaitingOnCompare = pdFALSE;
+            pxNewTCB->pxNextTaskHandle = NULL;
+            pxNewTCB->xCompareValue = 0;
+            pxNewTCB->pxRedundantValueErrorCb = NULL;
+            pxNewTCB->ucReplicatedTaskType = pdFALSE;
         }
         break;
 	}
@@ -1228,78 +1288,95 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB )
 	void vTaskDelete( TaskHandle_t xTaskToDelete )
 	{
 	TCB_t *pxTCB;
+    TCB_t *pxStartingTCB;
+    TCB_t *pxNextTCB = NULL;
 
 		taskENTER_CRITICAL();
 		{
 			/* If null is passed in here then it is the calling task that is
 			being deleted. */
 			pxTCB = prvGetTCBFromHandle( xTaskToDelete );
+			pxStartingTCB = pxTCB;
 
-			/* Remove task from the ready list. */
-			if( uxListRemove( &( pxTCB->xStateListItem ) ) == ( UBaseType_t ) 0 )
-			{
-				taskRESET_READY_PRIORITY( pxTCB->uxPriority );
-			}
-			else
-			{
-				mtCOVERAGE_TEST_MARKER();
-			}
+			do{
+                /* Remove task from the ready list. */
+                if( uxListRemove( &( pxTCB->xStateListItem ) ) == ( UBaseType_t ) 0 )
+                {
+                    taskRESET_READY_PRIORITY( pxTCB->uxPriority );
+                }
+                else
+                {
+                    mtCOVERAGE_TEST_MARKER();
+                }
 
-			/* Is the task waiting on an event also? */
-			if( listLIST_ITEM_CONTAINER( &( pxTCB->xEventListItem ) ) != NULL )
-			{
-				( void ) uxListRemove( &( pxTCB->xEventListItem ) );
-			}
-			else
-			{
-				mtCOVERAGE_TEST_MARKER();
-			}
+                /* Is the task waiting on an event also? */
+                if( listLIST_ITEM_CONTAINER( &( pxTCB->xEventListItem ) ) != NULL )
+                {
+                    ( void ) uxListRemove( &( pxTCB->xEventListItem ) );
+                }
+                else
+                {
+                    mtCOVERAGE_TEST_MARKER();
+                }
 
-			/* Increment the uxTaskNumber also so kernel aware debuggers can
-			detect that the task lists need re-generating.  This is done before
-			portPRE_TASK_DELETE_HOOK() as in the Windows port that macro will
-			not return. */
-			uxTaskNumber++;
+                /* Increment the uxTaskNumber also so kernel aware debuggers can
+                detect that the task lists need re-generating.  This is done before
+                portPRE_TASK_DELETE_HOOK() as in the Windows port that macro will
+                not return. */
+                uxTaskNumber++;
 
-			if( pxTCB == pxCurrentTCB )
-			{
-				/* A task is deleting itself.  This cannot complete within the
-				task itself, as a context switch to another task is required.
-				Place the task in the termination list.  The idle task will
-				check the termination list and free up any memory allocated by
-				the scheduler for the TCB and stack of the deleted task. */
-				vListInsertEnd( &xTasksWaitingTermination, &( pxTCB->xStateListItem ) );
+                /* Delete the timer for tracing the worst time of the task
+                if it is being used */
+                if( pxTCB->xWorstTimeTimer != NULL )
+                {
+                    xTimerDelete( pxTCB->xWorstTimeTimer, portMAX_DELAY );
+                }
 
-				/* Increment the ucTasksDeleted variable so the idle task knows
-				there is a task that has been deleted and that it should therefore
-				check the xTasksWaitingTermination list. */
-				++uxDeletedTasksWaitingCleanUp;
+                /* Get next TCB for when when using task replication */
+                if( NULL != pxTCB->pxNextTaskHandle )
+                {
+                    pxNextTCB = prvGetTCBFromHandle( pxTCB->pxNextTaskHandle );
+                }
 
-				/* The pre-delete hook is primarily for the Windows simulator,
-				in which Windows specific clean up operations are performed,
-				after which it is not possible to yield away from this task -
-				hence xYieldPending is used to latch that a context switch is
-				required. */
-				portPRE_TASK_DELETE_HOOK( pxTCB, &xYieldPending );
-			}
-			else
-			{
-				--uxCurrentNumberOfTasks;
-				prvDeleteTCB( pxTCB );
+                if( pxTCB == pxCurrentTCB )
+                {
+                    /* A task is deleting itself.  This cannot complete within the
+                    task itself, as a context switch to another task is required.
+                    Place the task in the termination list.  The idle task will
+                    check the termination list and free up any memory allocated by
+                    the scheduler for the TCB and stack of the deleted task. */
+                    vListInsertEnd( &xTasksWaitingTermination, &( pxTCB->xStateListItem ) );
 
-				/* Reset the next expected unblock time in case it referred to
-				the task that has just been deleted. */
-				prvResetNextTaskUnblockTime();
-			}
+                    /* Increment the ucTasksDeleted variable so the idle task knows
+                    there is a task that has been deleted and that it should therefore
+                    check the xTasksWaitingTermination list. */
+                    ++uxDeletedTasksWaitingCleanUp;
 
-			/* Let's delete the timer for tracing the worst time of the task
-			if it is being used */
-			if( pxTCB->xWorstTimeTimer != NULL )
-			{
-			    xTimerDelete( pxTCB->xWorstTimeTimer, portMAX_DELAY );
-			}
+                    /* The pre-delete hook is primarily for the Windows simulator,
+                    in which Windows specific clean up operations are performed,
+                    after which it is not possible to yield away from this task -
+                    hence xYieldPending is used to latch that a context switch is
+                    required. */
+                    portPRE_TASK_DELETE_HOOK( pxTCB, &xYieldPending );
+                }
+                else
+                {
+                    --uxCurrentNumberOfTasks;
+                    prvDeleteTCB( pxTCB );
 
-			traceTASK_DELETE( pxTCB );
+                    /* Reset the next expected unblock time in case it referred to
+                    the task that has just been deleted. */
+                    prvResetNextTaskUnblockTime();
+                }
+
+                traceTASK_DELETE( pxTCB );
+
+                if( NULL != pxNextTCB )
+                {
+                    pxTCB = pxNextTCB;
+                }
+			} while( taskTYPE_REPLICATED == pxTCB->ucTaskType &&
+			         pxTCB != pxStartingTCB );
 		}
 		taskEXIT_CRITICAL();
 
@@ -5146,7 +5223,7 @@ const TickType_t xConstTickCount = xTickCount;
 /*-----------------------------------------------------------*/
 
 /* Code below is added as a modification for tracking worst time of execution
-of a task @ref Additions */
+of a task */
 
 #if( INCLUDExTaskCreateTimed == 1 )
 
@@ -5165,8 +5242,16 @@ of a task @ref Additions */
             pxTimerCallback = vTimerWorstTimeCallback;
         }
 
-        return prvTaskCreateGeneric(pxTaskCode, pcName, usStackDepth, pvParameters,
-                uxPriority, pxCreatedTask, taskTYPE_TIMED, xWorstRunTime, pxTimerCallback);
+        return prvTaskCreateGeneric(pxTaskCode,
+                                    pcName,
+                                    usStackDepth,
+                                    pvParameters,
+                                    uxPriority,
+                                    pxCreatedTask,
+                                    taskTYPE_TIMED,
+                                    xWorstRunTime,
+                                    pxTimerCallback,
+                                    NULL );
     }
 #endif
 
@@ -5192,6 +5277,180 @@ uint8_t ucTaskGetType( TaskHandle_t pxTaskHandle )
 
 /*-----------------------------------------------------------*/
 
+#if( INCLUDExTaskCreateReplicated == 1 )
+
+    BaseType_t xTaskCreateReplicated( TaskFunction_t pxTaskCode,
+                            const char * const pcName,
+                            const configSTACK_DEPTH_TYPE usStackDepth,
+                            void * const pvParameters,
+                            UBaseType_t uxPriority,
+                            TaskHandle_t * const pxCreatedTask,
+                            uint8_t ucReplicatedType,
+                            RedundantValueErrorCb_t pxRedundantValueErrorCb )
+    {
+        BaseType_t xReturn;
+        TaskHandle_t pxInternalTaskHandle1 = NULL;
+        TaskHandle_t pxInternalTaskHandle2 = NULL;
+
+        configASSERT( ( ucReplicatedType == taskREPLICATED_NO_RECOVERY ) || ( ucReplicatedType == taskREPLICATED_RECOVERY ) );
+
+        /* Make sure all tasks are created before tasks are switched into */
+        taskENTER_CRITICAL();
+
+        xReturn = prvTaskCreateGeneric( pxTaskCode,
+                                        pcName,
+                                        usStackDepth,
+                                        pvParameters,
+                                        uxPriority,
+                                        &pxInternalTaskHandle1,
+                                        taskTYPE_REPLICATED,
+                                        0,
+                                        NULL,
+                                        pxRedundantValueErrorCb );
+
+        if( pdPASS != xReturn )
+        {
+            /* First task creation failed */
+            return xReturn;
+        }
+
+       xReturn = prvTaskCreateGeneric( pxTaskCode,
+                              pcName,
+                              usStackDepth,
+                              pvParameters,
+                              uxPriority,
+                              &pxInternalTaskHandle2,
+                              taskTYPE_REPLICATED,
+                              0,
+                              NULL,
+                              pxRedundantValueErrorCb );
+
+       if( pdPASS != xReturn )
+       {
+           /* Second task creation failed, delete first created task */
+           vTaskDelete(pxInternalTaskHandle1);
+
+           return xReturn;
+       }
+
+       /* Link the second task to the first one */
+       prvSetNextReplicatedTask( pxInternalTaskHandle1, pxInternalTaskHandle2 );
+
+       prvSetReplicatedTaskType( pxInternalTaskHandle1, ucReplicatedType );
+       prvSetReplicatedTaskType( pxInternalTaskHandle2, ucReplicatedType );
+
+        if( taskREPLICATED_RECOVERY == ucReplicatedType )
+        {
+            TaskHandle_t pxInternalTaskHandle3 = NULL;
+
+            /* Make third identical tasks */
+            xReturn = prvTaskCreateGeneric( pxTaskCode,
+                                            pcName,
+                                            usStackDepth,
+                                            pvParameters,
+                                            uxPriority,
+                                            &pxInternalTaskHandle3,
+                                            taskTYPE_REPLICATED,
+                                            0,
+                                            NULL,
+                                            pxRedundantValueErrorCb );
+            if( pdPASS != xReturn )
+            {
+                /* Third task creation failed, delete other tasks */
+                vTaskDelete( pxInternalTaskHandle1 );
+                vTaskDelete( pxInternalTaskHandle2 );
+
+                return xReturn;
+            }
+
+            prvSetReplicatedTaskType( pxInternalTaskHandle3, ucReplicatedType );
+
+            /* Link the tasks */
+            prvSetNextReplicatedTask( pxInternalTaskHandle2, pxInternalTaskHandle3 );
+            prvSetNextReplicatedTask( pxInternalTaskHandle3, pxInternalTaskHandle1 );
+        }
+        else
+        {
+            /* We only need two tasks */
+            prvSetNextReplicatedTask( pxInternalTaskHandle2, pxInternalTaskHandle1 );
+        }
+
+
+        if( pxCreatedTask != NULL )
+        {
+            /* If task handle to return is NULL we don't have to fill it,
+             * but as it isn't NULL we fill it with one of the created tasks */
+            *pxCreatedTask  = pxInternalTaskHandle1;
+        }
+
+        taskEXIT_CRITICAL();
+
+        return xReturn;
+    }
+#endif
+
+/*-----------------------------------------------------------*/
+
+#if( INCLUDExTaskCreateReplicated == 1 )
+    static void prvSetNextReplicatedTask( TaskHandle_t pxTaskHandle,
+            TaskHandle_t const pxNewNextTaskHandle )
+    {
+        TCB_t * pxTCB = prvGetTCBFromHandle( pxTaskHandle );
+        configASSERT( pxTCB );
+        configASSERT( pxNewNextTaskHandle );
+
+        pxTCB->pxNextTaskHandle = pxNewNextTaskHandle;
+    }
+#endif
+
+/*-----------------------------------------------------------*/
+
+#if( INCLUDExTaskCreateReplicated == 1 )
+    static void prvSetReplicatedTaskType( TaskHandle_t pxTaskHandle,
+            const uint8_t ucNewReplicatedTaskType )
+    {
+        TCB_t * pxTCB = prvGetTCBFromHandle( pxTaskHandle );
+        configASSERT( pxTCB );
+
+        pxTCB->ucReplicatedTaskType = ucNewReplicatedTaskType;
+    }
+#endif
+
+/*-----------------------------------------------------------*/
+
+#if( INCLUDExTaskCreateReplicated == 1 )
+    void vTaskSyncAndCompare( const CompareValue_t xCompareValue )
+    {
+        TCB_t * pxTCB = prvGetTCBFromHandle( NULL );
+        configASSERT( pxTCB );
+        configASSERT( taskTYPE_REPLICATED == pxTCB->ucTaskType );
+
+        // check if all other tasks are blocked by this function
+
+        // if yes compare values of all tasks
+            // if values match unblock all
+            // else if compare function returns pdTRUE delete all tasks
+
+        // else
+            // block indefinitely
+
+    }
+#endif
+
+/*-----------------------------------------------------------*/
+
+#if( INCLUDExTaskCreateReplicated == 1 )
+    void prvSetCompareValue( TaskHandle_t pxTaskHandle,
+                               const CompareValue_t xNewCompareValue )
+    {
+        TCB_t * pxTCB = prvGetTCBFromHandle( pxTaskHandle );
+        configASSERT( pxTCB );
+
+        pxTCB->xCompareValue = xNewCompareValue;
+    }
+#endif
+
+/*-----------------------------------------------------------*/
 /* Code below here allows additional code to be inserted into this source file,
 especially where access to file scope functions and data is needed (for example
 when performing module tests). */

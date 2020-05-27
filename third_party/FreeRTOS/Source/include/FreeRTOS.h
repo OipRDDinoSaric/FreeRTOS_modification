@@ -1029,8 +1029,17 @@ typedef struct xSTATIC_TCB
 
 	uint8_t     ucDummy22;
 
-	void        *xDummy23;
+    #if ( INCLUDExTaskCreateTimed == 1 )
+	    void        *xDummy23;
+    #endif
 
+    #if ( INCLUDExTaskCreateReplicated == 1 )
+	    uint8_t     ucDummy24;
+	    void        *pxDummy25;
+	    uint32_t    xDummy26;
+	    void        *xDummy27;
+	    uint8_t ucDummy28;
+	#endif
 } StaticTask_t;
 
 /*

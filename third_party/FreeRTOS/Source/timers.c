@@ -1083,7 +1083,7 @@ Timer_t * const pxTimer = ( Timer_t * ) xTimer;
 #endif /* configUSE_TRACE_FACILITY */
 /*-----------------------------------------------------------*/
 
-void vTimerWorstTimeCallback ( TimerHandle_t xTimer )
+void vTimerWorstTimeCallback ( WorstTimeTimerHandle_t xTimer )
 {
 #   if 0 /* Do NOT change this #if, it is a demonstration of how a user can
             define it's function to check what timer and task overflowed */

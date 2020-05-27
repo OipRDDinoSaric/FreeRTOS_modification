@@ -103,7 +103,7 @@ to exclude the API function. */
 #define INCLUDE_xTaskGetSchedulerState      1
 /* Additions include */
 #define INCLUDExTaskCreateTimed             1
-#define INCLUDExTaskCreadeReplicated        1
+#define INCLUDExTaskCreateReplicated        1
 
 /* 
  * The CMSIS-RTOS V2 FreeRTOS wrapper is dependent on the heap implementation used
