@@ -619,7 +619,7 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB ) PRIVILEGED_FUNCTION;
 
 #if( INCLUDExTaskCreateReplicated == 1 )
     /*
-     * Sets the type of replicated task when task replication is used
+     * Sets the type of replicated task when task replication is used.
      */
     static void prvSetReplicatedTaskType( TaskHandle_t pxTaskHandle,
         const uint8_t ucNewReplicatedTaskType );
@@ -627,12 +627,29 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB ) PRIVILEGED_FUNCTION;
 
 #if( INCLUDExTaskCreateReplicated == 1 )
     /*
-     * Sets the compare value of TCB when replicated tasks are used.
-     * Compare values are used to check if two tasks give the same output.
+     * Fills the xCompareValues buffer with compare values from replicated tasks
      */
-    void prvSetCompareValue( TaskHandle_t pxTaskHandle,
-                               const CompareValue_t xNewCompareValue );
+    static void prvGetCompareValues( TCB_t * pxTCB,
+                                     CompareValue_t * xCompareValues,
+                                     uint8_t ucValuesLen );
 #endif
+
+#if( INCLUDExTaskCreateReplicated == 1 )
+    /*
+     * Check is all replicated tasks have the same compare value. Return value
+     * is pdTRUE or pdFALSE.
+     */
+    static uint8_t prvIsCompareValueSame( TCB_t * pxTCB );
+#endif
+
+#if( INCLUDExTaskCreateReplicated == 1 )
+    /*
+     * Checks if all replicated tasks except calling task are waiting on the
+     * synchronization blockade. Return value is pdTRUE or pdFALSE.
+     */
+    static uint8_t prvIsLastArrivedRedundantTask( TCB_t * pxTCB );
+#endif
+
 /*
  * freertos_tasks_c_additions_init() should only be called if the user definable
  * macro FREERTOS_TASKS_C_ADDITIONS_INIT() is defined, as that is the only macro
@@ -5431,7 +5448,10 @@ uint8_t ucTaskGetType( TaskHandle_t pxTaskHandle )
             uint8_t ucIsDeleteRequest = pdFALSE;
             if( prvIsCompareValueSame( pxTCB )  == pdFALSE )
             {
-                CompareValue_t * pxCompareValues = prvGetCompareValues( pxTCB );
+                CompareValue_t pxCompareValues[taskREPLICATED_RECOVERY];
+
+                prvGetCompareValues( pxTCB, pxCompareValues,
+                                     pxTCB->ucReplicatedTaskType);
 
                 ucIsDeleteRequest = pxTCB->pxRedundantValueErrorCb(
                                                   pxCompareValues,
@@ -5446,6 +5466,7 @@ uint8_t ucTaskGetType( TaskHandle_t pxTaskHandle )
             }
             else
             {
+                /* Delete was not requested */
                 prvUnblockReplicatedTasks( pxTCB );
             }
         }
@@ -5455,6 +5476,26 @@ uint8_t ucTaskGetType( TaskHandle_t pxTaskHandle )
             prvBlockIndefinitely( pxTCB );
             /* Never reached */
         }
+    }
+#endif
+
+/*-----------------------------------------------------------*/
+
+#if( INCLUDExTaskCreateReplicated == 1 )
+    void xTaskSetCompareValue( CompareValue_t xNewCompareValue )
+    {
+        TCB_t * pxTCB = prvGetTCBFromHandle(NULL);
+        configASSERT( pxTCB );
+
+        pxTCB->xCompareValue = xNewCompareValue;
+    }
+#endif
+
+/*-----------------------------------------------------------*/
+
+#if( INCLUDExTaskCreateReplicated == 1 )
+    static void prvBlockIndefinitely( TCB_t * pxTCB )
+    {
 
     }
 #endif
@@ -5462,13 +5503,100 @@ uint8_t ucTaskGetType( TaskHandle_t pxTaskHandle )
 /*-----------------------------------------------------------*/
 
 #if( INCLUDExTaskCreateReplicated == 1 )
-    void prvSetCompareValue( TaskHandle_t pxTaskHandle,
-                               const CompareValue_t xNewCompareValue )
+    static void prvUnblockReplicatedTasks( TCB_t * pxTCB )
     {
-        TCB_t * pxTCB = prvGetTCBFromHandle( pxTaskHandle );
+
+    }
+#endif
+
+/*-----------------------------------------------------------*/
+
+#if( INCLUDExTaskCreateReplicated == 1 )
+    static void prvGetCompareValues( TCB_t * pxTCB,
+                                        CompareValue_t * xCompareValues,
+                                        uint8_t ucValuesLen )
+    {
+        TCB_t * pxWorkTCB = pxTCB;
+
         configASSERT( pxTCB );
 
-        pxTCB->xCompareValue = xNewCompareValue;
+        /* NOTE: This shall be called when scheduler is stopped */
+
+        for( uint8_t iii = 0; iii < ucValuesLen; iii++ )
+        {
+            xCompareValues[iii] = pxWorkTCB->xCompareValue;
+
+            configASSERT( pxWorkTCB->pxNextTaskHandle );
+            pxWorkTCB = ( TCB_t * ) pxWorkTCB->pxNextTaskHandle;
+        }
+    }
+#endif
+/*-----------------------------------------------------------*/
+
+#if( INCLUDExTaskCreateReplicated == 1 )
+    static uint8_t prvIsCompareValueSame( TCB_t * pxTCB )
+    {
+        TCB_t * pxStartTCB = pxTCB;
+        TCB_t * pxWorkTCB = pxTCB;
+
+        configASSERT( pxTCB );
+        configASSERT( pxWorkTCB->pxNextTaskHandle );
+
+        pxWorkTCB = ( TCB_t * ) pxWorkTCB->pxNextTaskHandle;
+
+        while( pxWorkTCB != pxStartTCB )
+        {
+            /* If task is stuck in this loop pxNextTaskHandle isn't set up
+             * correctly on all replicated tasks, they should be arranged in
+             * a ring */
+
+            if( pxStartTCB->xCompareValue != pxWorkTCB->xCompareValue )
+            {
+                /* Compare values are different, raise error */
+                return pdFALSE;
+            }
+
+            configASSERT( pxWorkTCB->pxNextTaskHandle );
+            pxWorkTCB = ( TCB_t * ) pxWorkTCB->pxNextTaskHandle;
+        }
+
+
+        return pdTRUE;
+    }
+#endif
+
+/*-----------------------------------------------------------*/
+
+#if( INCLUDExTaskCreateReplicated == 1 )
+    static uint8_t prvIsLastArrivedRedundantTask( TCB_t * pxTCB )
+    {
+        TCB_t * pxStartTCB = pxTCB;
+        TCB_t * pxWorkTCB = pxTCB;
+
+        configASSERT( pxTCB );
+        configASSERT( pxWorkTCB->pxNextTaskHandle );
+
+        pxWorkTCB = ( TCB_t * ) pxWorkTCB->pxNextTaskHandle;
+        do
+        {
+            /* If task is stuck in this loop pxNextTaskHandle isn't set up
+             * correctly on all replicated tasks */
+
+            /* NOTE: First task (calling task) is not checked */
+
+            if( pdFALSE == pxWorkTCB->ucIsWaitingOnCompare )
+            {
+                /* The task is not waiting for comparison, return false */
+                return pdFALSE;
+            }
+
+            configASSERT( pxWorkTCB->pxNextTaskHandle );
+            pxWorkTCB = ( TCB_t * ) pxWorkTCB->pxNextTaskHandle;
+
+        } while( pxWorkTCB != pxStartTCB );
+
+
+        return pdTRUE;
     }
 #endif
 

@@ -389,6 +389,12 @@ is used in assert() statements. */
                             RedundantValueErrorCb_t pxRedundantValueErrorCb );
 #endif
 
+
+// TODO Description
+#if( INCLUDExTaskCreateReplicated == 1 )
+    void xTaskSetCompareValue( CompareValue_t xNewCompareValue ):
+#endif
+
 // TODO Description
 void vTaskTimedReset( TaskHandle_t pxTaskHandle );
 
@@ -396,7 +402,9 @@ void vTaskTimedReset( TaskHandle_t pxTaskHandle );
 uint8_t ucTaskGetType( TaskHandle_t pxTaskHandle );
 
 // TODO Description
-void vTaskSyncAndCompare( const CompareValue_t xCompareValue );
+#if( INCLUDExTaskCreateReplicated == 1 )
+    void vTaskSyncAndCompare( const CompareValue_t xCompareValue );
+#endif
 /**
  * task. h
  *<pre>
