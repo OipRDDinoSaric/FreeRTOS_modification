@@ -71,7 +71,7 @@ typedef void * WorstTimeTimerHandle_t;
  */
 typedef BaseType_t (*TaskHookFunction_t)( void * );
 
-#if( INCLUDExTaskCreateTimed == 1 )
+#if( INCLUDE_xTaskCreateTimed == 1 )
 
     /*
      * Prototype of a function to call when timer expires
@@ -81,7 +81,7 @@ typedef BaseType_t (*TaskHookFunction_t)( void * );
 
 #endif
 
-#if( INCLUDExTaskCreateReplicated == 1 )
+#if( INCLUDE_xTaskCreateReplicated == 1 )
     /*
      * Type from compare value when using replicated tasks
      */
@@ -366,7 +366,7 @@ is used in assert() statements. */
 #endif
 
 // TODO Description
-#if( INCLUDExTaskCreateTimed == 1 )
+#if( INCLUDE_xTaskCreateTimed == 1 )
     BaseType_t xTaskCreateTimed( TaskFunction_t pxTaskCode,
                             const char * const pcName,
                             const configSTACK_DEPTH_TYPE usStackDepth,
@@ -378,7 +378,7 @@ is used in assert() statements. */
 #endif
 
 // TODO Description
-#if( INCLUDExTaskCreateReplicated == 1 )
+#if( INCLUDE_xTaskCreateReplicated == 1 )
     BaseType_t xTaskCreateReplicated( TaskFunction_t pxTaskCode,
                             const char * const pcName,
                             const configSTACK_DEPTH_TYPE usStackDepth,
@@ -391,8 +391,8 @@ is used in assert() statements. */
 
 
 // TODO Description
-#if( INCLUDExTaskCreateReplicated == 1 )
-    void xTaskSetCompareValue( CompareValue_t xNewCompareValue ):
+#if( INCLUDE_xTaskCreateReplicated == 1 )
+    void xTaskSetCompareValue( CompareValue_t xNewCompareValue );
 #endif
 
 // TODO Description
@@ -402,8 +402,8 @@ void vTaskTimedReset( TaskHandle_t pxTaskHandle );
 uint8_t ucTaskGetType( TaskHandle_t pxTaskHandle );
 
 // TODO Description
-#if( INCLUDExTaskCreateReplicated == 1 )
-    void vTaskSyncAndCompare( const CompareValue_t xCompareValue );
+#if( INCLUDE_xTaskCreateReplicated == 1 )
+    void vTaskSyncAndCompare( const CompareValue_t xNewCompareValue );
 #endif
 /**
  * task. h

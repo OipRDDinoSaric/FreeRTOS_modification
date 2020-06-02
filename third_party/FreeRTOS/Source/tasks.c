@@ -343,11 +343,11 @@ typedef struct tskTaskControlBlock
 
     uint8_t ucTaskType; /*< TCB can be defined as default, timed and replicated depending on redundancy chosen, as defined by taskTYPE_...*/
 
-    #if ( INCLUDExTaskCreateTimed == 1 )
+    #if ( INCLUDE_xTaskCreateTimed == 1 )
         TimerHandle_t xWorstTimeTimer; /*< Timer used for tracking the worst time of execution */
     #endif
 
-    #if ( INCLUDExTaskCreateReplicated == 1 )
+    #if ( INCLUDE_xTaskCreateReplicated == 1 )
         uint8_t ucIsWaitingOnCompare; /*< Boolean value used to signalize task it is waiting for comparison of tasks */
         TaskHandle_t pxNextTaskHandle; /*< When using replicated tasks points to next task in replicated group, 1->2->3->1... */
         CompareValue_t xCompareValue; /*< Value to compare with other tasks */
@@ -573,7 +573,7 @@ static void prvResetNextTaskUnblockTime( void );
  * the memory and calls the initialize TCB function
  */
 #if configSUPPORT_DYNAMIC_ALLOCATION
-    BaseType_t prvTaskCreateGeneric( TaskFunction_t pxTaskCode,
+    static BaseType_t prvTaskCreateGeneric( TaskFunction_t pxTaskCode,
                                      const char * const pcName,     /*lint !e971 Unqualified char types are allowed for strings and single characters only. */
                                      const configSTACK_DEPTH_TYPE usStackDepth,
                                      void * const pvParameters,
@@ -609,7 +609,7 @@ static void prvInitialiseNewTask(   TaskFunction_t pxTaskCode,
  */
 static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB ) PRIVILEGED_FUNCTION;
 
-#if( INCLUDExTaskCreateReplicated == 1 )
+#if( INCLUDE_xTaskCreateReplicated == 1 )
     /*
      * Sets the handle of next replicated task when using task replication
      */
@@ -617,7 +617,7 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB ) PRIVILEGED_FUNCTION;
         TaskHandle_t const pxNewNextTaskHandle );
 #endif
 
-#if( INCLUDExTaskCreateReplicated == 1 )
+#if( INCLUDE_xTaskCreateReplicated == 1 )
     /*
      * Sets the type of replicated task when task replication is used.
      */
@@ -625,7 +625,12 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB ) PRIVILEGED_FUNCTION;
         const uint8_t ucNewReplicatedTaskType );
 #endif
 
-#if( INCLUDExTaskCreateReplicated == 1 )
+#if( INCLUDE_xTaskCreateReplicated == 1 )
+    static void prvUnblockReplicatedTasks( TCB_t * pxStartTCB );
+#endif
+
+/*-----------------------------------------------------------*/
+#if( INCLUDE_xTaskCreateReplicated == 1 )
     /*
      * Fills the xCompareValues buffer with compare values from replicated tasks
      */
@@ -634,7 +639,7 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB ) PRIVILEGED_FUNCTION;
                                      uint8_t ucValuesLen );
 #endif
 
-#if( INCLUDExTaskCreateReplicated == 1 )
+#if( INCLUDE_xTaskCreateReplicated == 1 )
     /*
      * Check is all replicated tasks have the same compare value. Return value
      * is pdTRUE or pdFALSE.
@@ -642,7 +647,7 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB ) PRIVILEGED_FUNCTION;
     static uint8_t prvIsCompareValueSame( TCB_t * pxTCB );
 #endif
 
-#if( INCLUDExTaskCreateReplicated == 1 )
+#if( INCLUDE_xTaskCreateReplicated == 1 )
     /*
      * Checks if all replicated tasks except calling task are waiting on the
      * synchronization blockade. Return value is pdTRUE or pdFALSE.
@@ -846,7 +851,7 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB ) PRIVILEGED_FUNCTION;
                                      NULL );
     }
 
-	BaseType_t prvTaskCreateGeneric( TaskFunction_t pxTaskCode,
+	static BaseType_t prvTaskCreateGeneric( TaskFunction_t pxTaskCode,
 							         const char * const pcName,		/*lint !e971 Unqualified char types are allowed for strings and single characters only. */
 							         const configSTACK_DEPTH_TYPE usStackDepth,
 							         void * const pvParameters,
@@ -5242,7 +5247,7 @@ const TickType_t xConstTickCount = xTickCount;
 /* Code below is added as a modification for tracking worst time of execution
 of a task */
 
-#if( INCLUDExTaskCreateTimed == 1 )
+#if( INCLUDE_xTaskCreateTimed == 1 )
 
     BaseType_t xTaskCreateTimed( TaskFunction_t pxTaskCode,
                             const char * const pcName,
@@ -5294,7 +5299,7 @@ uint8_t ucTaskGetType( TaskHandle_t pxTaskHandle )
 
 /*-----------------------------------------------------------*/
 
-#if( INCLUDExTaskCreateReplicated == 1 )
+#if( INCLUDE_xTaskCreateReplicated == 1 )
 
     BaseType_t xTaskCreateReplicated( TaskFunction_t pxTaskCode,
                             const char * const pcName,
@@ -5310,6 +5315,7 @@ uint8_t ucTaskGetType( TaskHandle_t pxTaskHandle )
         TaskHandle_t pxInternalTaskHandle2 = NULL;
 
         configASSERT( ( ucReplicatedType == taskREPLICATED_NO_RECOVERY ) || ( ucReplicatedType == taskREPLICATED_RECOVERY ) );
+        configASSERT( pxRedundantValueErrorCb );
 
         /* Make sure all tasks are created before tasks are switched into */
         taskENTER_CRITICAL();
@@ -5332,15 +5338,15 @@ uint8_t ucTaskGetType( TaskHandle_t pxTaskHandle )
         }
 
        xReturn = prvTaskCreateGeneric( pxTaskCode,
-                              pcName,
-                              usStackDepth,
-                              pvParameters,
-                              uxPriority,
-                              &pxInternalTaskHandle2,
-                              taskTYPE_REPLICATED,
-                              0,
-                              NULL,
-                              pxRedundantValueErrorCb );
+                                       pcName,
+                                       usStackDepth,
+                                       pvParameters,
+                                       uxPriority,
+                                       &pxInternalTaskHandle2,
+                                       taskTYPE_REPLICATED,
+                                       0,
+                                       NULL,
+                                       pxRedundantValueErrorCb );
 
        if( pdPASS != xReturn )
        {
@@ -5408,7 +5414,7 @@ uint8_t ucTaskGetType( TaskHandle_t pxTaskHandle )
 
 /*-----------------------------------------------------------*/
 
-#if( INCLUDExTaskCreateReplicated == 1 )
+#if( INCLUDE_xTaskCreateReplicated == 1 )
     static void prvSetNextReplicatedTask( TaskHandle_t pxTaskHandle,
             TaskHandle_t const pxNewNextTaskHandle )
     {
@@ -5422,7 +5428,7 @@ uint8_t ucTaskGetType( TaskHandle_t pxTaskHandle )
 
 /*-----------------------------------------------------------*/
 
-#if( INCLUDExTaskCreateReplicated == 1 )
+#if( INCLUDE_xTaskCreateReplicated == 1 )
     static void prvSetReplicatedTaskType( TaskHandle_t pxTaskHandle,
             const uint8_t ucNewReplicatedTaskType )
     {
@@ -5435,13 +5441,15 @@ uint8_t ucTaskGetType( TaskHandle_t pxTaskHandle )
 
 /*-----------------------------------------------------------*/
 
-#if( INCLUDExTaskCreateReplicated == 1 )
-    void vTaskSyncAndCompare( const CompareValue_t xCompareValue )
+#if( INCLUDE_xTaskCreateReplicated == 1 )
+    void vTaskSyncAndCompare( const CompareValue_t xNewCompareValue )
     {
         TCB_t * pxTCB = prvGetTCBFromHandle( NULL );
 
         configASSERT( pxTCB );
         configASSERT( taskTYPE_REPLICATED == pxTCB->ucTaskType );
+
+        pxTCB->xCompareValue = xNewCompareValue;
 
         if( prvIsLastArrivedRedundantTask( pxTCB ) == pdTRUE )
         {
@@ -5472,16 +5480,18 @@ uint8_t ucTaskGetType( TaskHandle_t pxTaskHandle )
         }
         else
         {
+            /* Task was not last to arrive so signal it is waiting on compare
+             * and suspend it */
             pxTCB->ucIsWaitingOnCompare = pdTRUE;
-            prvBlockIndefinitely( pxTCB );
-            /* Never reached */
+
+            vTaskSuspend(NULL);
         }
     }
 #endif
 
 /*-----------------------------------------------------------*/
 
-#if( INCLUDExTaskCreateReplicated == 1 )
+#if( INCLUDE_xTaskCreateReplicated == 1 )
     void xTaskSetCompareValue( CompareValue_t xNewCompareValue )
     {
         TCB_t * pxTCB = prvGetTCBFromHandle(NULL);
@@ -5490,28 +5500,38 @@ uint8_t ucTaskGetType( TaskHandle_t pxTaskHandle )
         pxTCB->xCompareValue = xNewCompareValue;
     }
 #endif
-
 /*-----------------------------------------------------------*/
 
-#if( INCLUDExTaskCreateReplicated == 1 )
-    static void prvBlockIndefinitely( TCB_t * pxTCB )
+#if( INCLUDE_xTaskCreateReplicated == 1 )
+    static void prvUnblockReplicatedTasks( TCB_t * pxStartTCB )
     {
+        TCB_t * pxWorkTCB;
 
+        configASSERT( pxStartTCB );
+        configASSERT( pxStartTCB->pxNextTaskHandle );
+        configASSERT( pxStartTCB->ucTaskType == taskTYPE_REPLICATED );
+
+        pxWorkTCB = pxStartTCB->pxNextTaskHandle;
+
+        /* Make sure all tasks are resumed before tasks are switched into */
+        taskENTER_CRITICAL();
+
+        while( pxWorkTCB != pxStartTCB )
+        {
+            vTaskResume( pxWorkTCB );
+
+            pxWorkTCB->ucIsWaitingOnCompare = pdFALSE;
+            pxWorkTCB = pxWorkTCB->pxNextTaskHandle;
+            configASSERT( pxWorkTCB );
+        }
+
+        taskEXIT_CRITICAL();
     }
 #endif
 
 /*-----------------------------------------------------------*/
 
-#if( INCLUDExTaskCreateReplicated == 1 )
-    static void prvUnblockReplicatedTasks( TCB_t * pxTCB )
-    {
-
-    }
-#endif
-
-/*-----------------------------------------------------------*/
-
-#if( INCLUDExTaskCreateReplicated == 1 )
+#if( INCLUDE_xTaskCreateReplicated == 1 )
     static void prvGetCompareValues( TCB_t * pxTCB,
                                         CompareValue_t * xCompareValues,
                                         uint8_t ucValuesLen )
@@ -5520,7 +5540,7 @@ uint8_t ucTaskGetType( TaskHandle_t pxTaskHandle )
 
         configASSERT( pxTCB );
 
-        /* NOTE: This shall be called when scheduler is stopped */
+        /* WARNING: Shall be called when scheduler is stopped */
 
         for( uint8_t iii = 0; iii < ucValuesLen; iii++ )
         {
@@ -5531,9 +5551,10 @@ uint8_t ucTaskGetType( TaskHandle_t pxTaskHandle )
         }
     }
 #endif
+
 /*-----------------------------------------------------------*/
 
-#if( INCLUDExTaskCreateReplicated == 1 )
+#if( INCLUDE_xTaskCreateReplicated == 1 )
     static uint8_t prvIsCompareValueSame( TCB_t * pxTCB )
     {
         TCB_t * pxStartTCB = pxTCB;
@@ -5567,7 +5588,7 @@ uint8_t ucTaskGetType( TaskHandle_t pxTaskHandle )
 
 /*-----------------------------------------------------------*/
 
-#if( INCLUDExTaskCreateReplicated == 1 )
+#if( INCLUDE_xTaskCreateReplicated == 1 )
     static uint8_t prvIsLastArrivedRedundantTask( TCB_t * pxTCB )
     {
         TCB_t * pxStartTCB = pxTCB;
@@ -5599,8 +5620,6 @@ uint8_t ucTaskGetType( TaskHandle_t pxTaskHandle )
         return pdTRUE;
     }
 #endif
-
-/*-----------------------------------------------------------*/
 
 /*-----------------------------------------------------------*/
 /* Code below here allows additional code to be inserted into this source file,

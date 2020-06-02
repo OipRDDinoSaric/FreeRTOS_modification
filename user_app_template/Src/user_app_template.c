@@ -41,6 +41,9 @@ void vTask2 (void *pvParameters);
 void vTask3 (void *pvParameters);
 void vTask4 (void *pvParameters);
 
+/* Called when error happens with compare values */
+uint8_t cmp_val_err_cb (CompareValue_t * pxCompareValues, uint8_t ucLen);
+
 void timer_cb_fnc (TimerHandle_t xTimer);
 
 #ifndef NDEBUG
@@ -48,14 +51,16 @@ void timer_cb_fnc (TimerHandle_t xTimer);
 static const uint8_t freeRTOSMemoryScheme = 4;
 #endif
 
+uint32_t compare_fail = 0;
+
 void user_app_template_run (void)
 {
     xTaskCreate(vTask1, "T1", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
     xTaskCreate(vTask2, "T2", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
     xTaskCreateReplicated(vTask3, "T3", configMINIMAL_STACK_SIZE, NULL, 1, NULL,
-    taskREPLICATED_NO_RECOVERY, NULL);
+    taskREPLICATED_NO_RECOVERY, cmp_val_err_cb);
     xTaskCreateReplicated(vTask4, "T4", configMINIMAL_STACK_SIZE, NULL, 1, NULL,
-    taskREPLICATED_RECOVERY, NULL);
+    taskREPLICATED_RECOVERY, cmp_val_err_cb);
 
     /* Give control to FreeRTOS */
     vTaskStartScheduler();
@@ -80,6 +85,8 @@ void vTask2 (void *pvParameters)
 {
     for (;;)
     {
+        printf("Task type of task %s is %d\n", pcTaskGetName(NULL),
+                ucTaskGetType(NULL));
         HAL_GPIO_TogglePin(LED_BLUE_GPIO_Port, LED_BLUE_Pin);
         vTaskDelay(pdMS_TO_TICKS(1 * 1000));
     }
@@ -91,12 +98,13 @@ void vTask3 (void *pvParameters)
     {
         printf("Task type of task %s is %d\n", pcTaskGetName(NULL),
                 ucTaskGetType(NULL));
-        HAL_GPIO_TogglePin(LED_ORANGE_GPIO_Port, LED_ORANGE_Pin);
+        HAL_GPIO_TogglePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin);
         vTaskDelay(pdMS_TO_TICKS(1 * 1000));
         if (HAL_GPIO_ReadPin(BTN_BLUE_GPIO_Port, BTN_BLUE_Pin) == pdTRUE)
         {
             vTaskDelete(NULL);
         }
+        vTaskSyncAndCompare(compare_fail++);
     }
 }
 
@@ -104,13 +112,31 @@ void vTask4 (void *pvParameters)
 {
     for (;;)
     {
-        HAL_GPIO_TogglePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin);
-        vTaskDelay(pdMS_TO_TICKS(2 * 1000));
+        printf("Task type of task %s is %d\n", pcTaskGetName(NULL),
+                ucTaskGetType(NULL));
+        HAL_GPIO_TogglePin(LED_ORANGE_GPIO_Port, LED_ORANGE_Pin);
+        vTaskDelay(pdMS_TO_TICKS(1 * 1000));
         if (HAL_GPIO_ReadPin(BTN_BLUE_GPIO_Port, BTN_BLUE_Pin) == pdTRUE)
         {
             vTaskDelete(NULL);
         }
+        vTaskSyncAndCompare(compare_fail++);
     }
+}
+
+uint8_t cmp_val_err_cb (CompareValue_t * pxCompareValues, uint8_t ucLen)
+{
+    uint8_t ucIsTaskDeleteNeeded = pdFALSE;
+
+    printf("Compare values don't match:");
+
+    for (uint32_t iii = 0; iii < ucLen; iii++)
+    {
+        printf(" %lu", pxCompareValues[iii]);
+    }
+    printf("\n");
+
+    return ucIsTaskDeleteNeeded;
 }
 
 void timer_cb_fnc (TimerHandle_t xTimer)
