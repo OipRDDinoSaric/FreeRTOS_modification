@@ -237,6 +237,26 @@ extern "C" {
 	#define configASSERT_DEFINED 1
 #endif
 
+#if INCLUDE_xTaskCreateTimed == 1
+
+    #if configUSE_TIMERS != 1
+        #error If INCLUDE_xTaskCreateTimed is defined configUSE_TIMERS must be set to 1.
+    #endif
+
+    #if configSUPPORT_DYNAMIC_ALLOCATION != 1
+        #error If INCLUDE_xTaskCreateTimed is defined configSUPPORT_DYNAMIC_ALLOCATION must be set to 1.
+    #endif
+
+#endif
+
+#if INCLUDE_xTaskCreateReplicated == 1
+
+    #if configSUPPORT_DYNAMIC_ALLOCATION != 1
+        #error If INCLUDE_xTaskCreateReplicated is defined configSUPPORT_DYNAMIC_ALLOCATION must be set to 1.
+    #endif
+
+#endif
+
 /* The timers module relies on xTaskGetSchedulerState(). */
 #if configUSE_TIMERS == 1
 

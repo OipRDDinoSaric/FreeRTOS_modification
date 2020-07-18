@@ -5442,14 +5442,17 @@ uint8_t ucTaskGetType( TaskHandle_t pxTaskHandle )
 /*-----------------------------------------------------------*/
 
 #if( INCLUDE_xTaskCreateReplicated == 1 )
-    void vTaskSyncAndCompare( const CompareValue_t xNewCompareValue )
+    void vTaskSyncAndCompare( const CompareValue_t * const pxNewCompareValue )
     {
         TCB_t * pxTCB = prvGetTCBFromHandle( NULL );
 
         configASSERT( pxTCB );
         configASSERT( taskTYPE_REPLICATED == pxTCB->ucTaskType );
 
-        pxTCB->xCompareValue = xNewCompareValue;
+        if( pxNewCompareValue != NULL )
+        {
+            pxTCB->xCompareValue = *pxNewCompareValue;
+        }
 
         if( prvIsLastArrivedRedundantTask( pxTCB ) == pdTRUE )
         {

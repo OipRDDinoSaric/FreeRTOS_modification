@@ -1093,9 +1093,9 @@ void vTimerWorstTimeCallback ( WorstTimeTimerHandle_t xTimer )
 
 #       ifndef NDEBUG
         {
-            void * ph_owner_task = pvTimerGetTimerID( xTimer );
+            void * phOwnerTask = pvTimerGetTimerID( xTimer );
             printf("Timer %s overflowed\n", pcTimerGetName( xTimer ));
-            printf("Task %s overflowed\n", pcTaskGetName( ph_owner_task ));
+            printf("Task %s overflowed\n", pcTaskGetName( phOwnerTask ));
         }
 #       endif
     }

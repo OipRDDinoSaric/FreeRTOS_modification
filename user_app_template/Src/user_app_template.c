@@ -126,7 +126,7 @@ void vTask4 (void *pvParameters)
 
 uint8_t cmp_val_err_cb (CompareValue_t * pxCompareValues, uint8_t ucLen)
 {
-    uint8_t ucIsTaskDeleteNeeded = pdFALSE;
+    uint8_t ucIsTaskDeleteNeeded = pdTRUE;
 
     printf("Compare values don't match:");
 
