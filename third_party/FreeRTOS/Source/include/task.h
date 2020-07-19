@@ -674,9 +674,9 @@ void vTaskTimedReset( TaskHandle_t pxTaskHandle );
 
 /**
 * task. h
-* <pre>uint8_t ucTaskGetType( TaskHandle_t pxTaskHandle );</pre>
+* <pre>eTaskType eTaskGetType( TaskHandle_t pxTaskHandle );</pre>
 *
-* Get the type of task.
+* Get the type of the task.
 *
 * @param pxTaskHandle Handle of the task to be queried.  Passing a NULL
 * handle results in getting the type of calling task.
@@ -696,8 +696,8 @@ eTaskType eTaskGetType( TaskHandle_t pxTaskHandle );
 *
 * @warning Shall only be used for replicated tasks.
 *
-* @param pxTaskHandle Handle of the task to be queried. Passing a NULL handle
-* results in reseting the timer of calling task.
+* @param pxNewCompareValue Pointer of the compare value to be copied from. If
+* NULL is passed in, previous compare value is used.
 *
 * Example usage:
 <pre>
@@ -715,7 +715,7 @@ void vReplicatedTask( void * pvParameters )
 * \ingroup TaskCtrl
 */
 #if( INCLUDE_xTaskCreateReplicated == 1 )
-    void vTaskSyncAndCompare( const CompareValue_t * const pxNewCompareValue  );
+    void vTaskSyncAndCompare( const CompareValue_t * const pxNewCompareValue );
 #endif
 /**
  * task. h

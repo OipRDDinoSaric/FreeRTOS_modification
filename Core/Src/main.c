@@ -107,7 +107,7 @@ int main (void)
     /* USER CODE BEGIN 2 */
     user_app_template_run();
 
-    /* NEVER REACHED */
+    /* WARNING: NEVER REACHED */
 
 #if 0
     /* USER CODE END 2 */
