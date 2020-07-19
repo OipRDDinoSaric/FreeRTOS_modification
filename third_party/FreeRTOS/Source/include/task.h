@@ -460,7 +460,7 @@ void vTaskTimeoutCallback ( WorstTimeTimerHandle_t xTimer )
 
     // Maybe task deletion is needed. Calling vTaskDelete automatically deletes
     // the timer too. Do NOT delete the timer directly. That will cause
-    // undefined behavior when deleting task.
+    // undefined behavior when deleting the task.
     vTaskDelete( pvTimerGetTimerID( xTimer ) );
 }
 
@@ -650,9 +650,23 @@ TaskHandle_t xHandle = NULL;
 *
 * Reset the timer of the timed task.
 *
+* @warning Shall only be used for timed tasks.
+*
 * @param pxTaskHandle Handle of the task whose timer shall be reset.
 * Passing a NULL handle results in reseting the timer of the calling task.
 *
+* Example usage:
+<pre>
+void vTimedTask( void * pvParameters )
+{
+    for( ;; )
+    {
+        // Task code goes here.
+
+        vTaskTimedReset(NULL);
+    }
+}
+</pre>
 * \defgroup vTaskTimedReset vTaskTimedReset
 * \ingroup TaskCtrl
 */
@@ -662,12 +676,12 @@ void vTaskTimedReset( TaskHandle_t pxTaskHandle );
 * task. h
 * <pre>uint8_t ucTaskGetType( TaskHandle_t pxTaskHandle );</pre>
 *
-* Get the type of task. Valid values are from
+* Get the type of task.
 *
 * @param pxTaskHandle Handle of the task to be queried.  Passing a NULL
-* handle results in reseting the timer of calling task.
+* handle results in getting the type of calling task.
 *
-* \defgroup vTaskTimedReset vTaskTimedReset
+* \defgroup eTaskGetType eTaskGetType
 * \ingroup TaskCtrl
 */
 eTaskType eTaskGetType( TaskHandle_t pxTaskHandle );
@@ -676,11 +690,27 @@ eTaskType eTaskGetType( TaskHandle_t pxTaskHandle );
 * task. h
 * <pre>void vTaskSyncAndCompare( const CompareValue_t * const pxNewCompareValue  );</pre>
 *
-* Get the type of task. Valid values are:
+* Waits until every replicated task is finished. When every task is finished
+* function compares the compare values and if there is a mismatch it calls the
+* predefined callback.
 *
-* @param pxTaskHandle Handle of the task to be queried.  Passing a NULL
-* handle results in reseting the timer of calling task.
+* @warning Shall only be used for replicated tasks.
 *
+* @param pxTaskHandle Handle of the task to be queried. Passing a NULL handle
+* results in reseting the timer of calling task.
+*
+* Example usage:
+<pre>
+void vReplicatedTask( void * pvParameters )
+{
+    for( ;; )
+    {
+        // Task code goes here.
+
+        vTaskSyncAndCompare(&xCompareValue);
+    }
+}
+</pre>
 * \defgroup vTaskTimedReset vTaskTimedReset
 * \ingroup TaskCtrl
 */
