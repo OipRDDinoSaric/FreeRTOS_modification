@@ -104,7 +104,8 @@ void vTask3 (void *pvParameters)
         {
             vTaskDelete(NULL);
         }
-        vTaskSyncAndCompare(compare_fail++);
+        compare_fail++;
+        vTaskSyncAndCompare(&(compare_fail));
     }
 }
 
@@ -120,7 +121,8 @@ void vTask4 (void *pvParameters)
         {
             vTaskDelete(NULL);
         }
-        vTaskSyncAndCompare(compare_fail++);
+        compare_fail++;
+        vTaskSyncAndCompare(&compare_fail);
     }
 }
 

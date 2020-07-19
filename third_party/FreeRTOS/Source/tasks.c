@@ -69,11 +69,6 @@ functions but without including stdio.h here. */
 #define taskWAITING_NOTIFICATION		( ( uint8_t ) 1 )
 #define taskNOTIFICATION_RECEIVED		( ( uint8_t ) 2 )
 
-/* Macros for determining task type */
-#define taskTYPE_DEFAULT                ( ( uint8_t ) 0 )
-#define taskTYPE_TIMED                  ( ( uint8_t ) 1 )
-#define taskTYPE_REPLICATED             ( ( uint8_t ) 2 )
-
 /*
  * The value used to fill the stack of a task when the task is created.  This
  * is used purely for checking the high water mark for tasks.
@@ -341,7 +336,7 @@ typedef struct tskTaskControlBlock
 		uint8_t ucDelayAborted;
 	#endif
 
-    uint8_t ucTaskType; /*< TCB can be defined as default, timed and replicated depending on redundancy chosen, as defined by taskTYPE_...*/
+	eTaskType eType; /*< TCB can be defined as default, timed and replicated depending on redundancy chosen. */
 
     #if ( INCLUDE_xTaskCreateTimed == 1 )
         TimerHandle_t xWorstTimeTimer; /*< Timer used for tracking the worst time of execution */
@@ -598,7 +593,7 @@ static void prvInitialiseNewTask(   TaskFunction_t pxTaskCode,
                                     TaskHandle_t * const pxCreatedTask,
                                     TCB_t *pxNewTCB,
                                     const MemoryRegion_t * const xRegions,
-                                    uint8_t ucTaskType,
+                                    eTaskType eType,
                                     TickType_t xWorstRunTime,
                                     WorstTimeTimerCb_t pxTimerCallback,
                                     RedundantValueErrorCb_t pxRedundantValueErrorCb ) PRIVILEGED_FUNCTION;
@@ -718,7 +713,7 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB ) PRIVILEGED_FUNCTION;
 			                      &xReturn,
 			                      pxNewTCB,
 			                      NULL,
-			                      taskTYPE_DEFAULT,
+			                      eDefault,
 			                      0,
 			                      NULL,
 			                      NULL );
@@ -845,7 +840,7 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB ) PRIVILEGED_FUNCTION;
                                      pvParameters,
                                      uxPriority,
                                      pxCreatedTask,
-                                     taskTYPE_DEFAULT,
+                                     eDefault,
                                      0,
                                      NULL,
                                      NULL );
@@ -966,7 +961,7 @@ static void prvInitialiseNewTask( 	TaskFunction_t pxTaskCode,
 									TaskHandle_t * const pxCreatedTask,
 									TCB_t *pxNewTCB,
 									const MemoryRegion_t * const xRegions,
-									uint8_t ucTaskType,
+									eTaskType eType,
 									TickType_t xWorstRunTime,
 									WorstTimeTimerCb_t pxTimerCallback,
 									RedundantValueErrorCb_t pxRedundantValueErrorCb )
@@ -1154,10 +1149,10 @@ UBaseType_t x;
 	#endif /* portUSING_MPU_WRAPPERS */
 
 	/* Handles initialization of task type specific data */
-	switch( ucTaskType )
+	switch( eType )
 	{
 
-	    case taskTYPE_TIMED:
+	    case eTimed:
 	    {
 	        static uint8_t ucWorstTimeTimerID = 0;
 	        char pcTimerName[18] = "WorstTimeTimer";
@@ -1182,7 +1177,7 @@ UBaseType_t x;
 	    }
 	    break;
 
-	    case taskTYPE_REPLICATED:
+	    case eReplicated:
 	    {
 	        pxNewTCB->ucIsWaitingOnCompare = pdFALSE;
 	        pxNewTCB->pxRedundantValueErrorCb = pxRedundantValueErrorCb;
@@ -1192,7 +1187,7 @@ UBaseType_t x;
 	    }
 	    break;
 
-        case taskTYPE_DEFAULT:
+        case eDefault:
         default:
         {
             /* Set unused handle values to default value */
@@ -1207,7 +1202,7 @@ UBaseType_t x;
         break;
 	}
 
-    pxNewTCB->ucTaskType = ucTaskType;
+    pxNewTCB->eType = eType;
 
 	if( ( void * ) pxCreatedTask != NULL )
 	{
@@ -1397,7 +1392,7 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB )
                 {
                     pxTCB = pxNextTCB;
                 }
-			} while( taskTYPE_REPLICATED == pxTCB->ucTaskType &&
+			} while( eReplicated == pxTCB->eType &&
 			         pxTCB != pxStartingTCB );
 		}
 		taskEXIT_CRITICAL();
@@ -5270,7 +5265,7 @@ of a task */
                                     pvParameters,
                                     uxPriority,
                                     pxCreatedTask,
-                                    taskTYPE_TIMED,
+                                    eTimed,
                                     xWorstRunTime,
                                     pxTimerCallback,
                                     NULL );
@@ -5283,18 +5278,18 @@ void vTaskTimedReset( TaskHandle_t pxTaskHandle )
 {
     TCB_t * pxTaskToTimeReset = prvGetTCBFromHandle( pxTaskHandle );
 
-    configASSERT( pxTaskToTimeReset->ucTaskType == taskTYPE_TIMED );
+    configASSERT( pxTaskToTimeReset->eType == eTimed );
 
     xTimerReset( pxTaskToTimeReset->xWorstTimeTimer, 0 );
 }
 
 /*-----------------------------------------------------------*/
 
-uint8_t ucTaskGetType( TaskHandle_t pxTaskHandle )
+eTaskType eTaskGetType( TaskHandle_t pxTaskHandle )
 {
     TCB_t * pxTCB = prvGetTCBFromHandle( pxTaskHandle );
     configASSERT( pxTCB );
-    return pxTCB->ucTaskType;
+    return pxTCB->eType;
 }
 
 /*-----------------------------------------------------------*/
@@ -5326,7 +5321,7 @@ uint8_t ucTaskGetType( TaskHandle_t pxTaskHandle )
                                         pvParameters,
                                         uxPriority,
                                         &pxInternalTaskHandle1,
-                                        taskTYPE_REPLICATED,
+                                        eReplicated,
                                         0,
                                         NULL,
                                         pxRedundantValueErrorCb );
@@ -5343,7 +5338,7 @@ uint8_t ucTaskGetType( TaskHandle_t pxTaskHandle )
                                        pvParameters,
                                        uxPriority,
                                        &pxInternalTaskHandle2,
-                                       taskTYPE_REPLICATED,
+                                       eReplicated,
                                        0,
                                        NULL,
                                        pxRedundantValueErrorCb );
@@ -5373,7 +5368,7 @@ uint8_t ucTaskGetType( TaskHandle_t pxTaskHandle )
                                             pvParameters,
                                             uxPriority,
                                             &pxInternalTaskHandle3,
-                                            taskTYPE_REPLICATED,
+                                            eReplicated,
                                             0,
                                             NULL,
                                             pxRedundantValueErrorCb );
@@ -5447,7 +5442,7 @@ uint8_t ucTaskGetType( TaskHandle_t pxTaskHandle )
         TCB_t * pxTCB = prvGetTCBFromHandle( NULL );
 
         configASSERT( pxTCB );
-        configASSERT( taskTYPE_REPLICATED == pxTCB->ucTaskType );
+        configASSERT( eReplicated == pxTCB->eType );
 
         if( pxNewCompareValue != NULL )
         {
@@ -5495,7 +5490,7 @@ uint8_t ucTaskGetType( TaskHandle_t pxTaskHandle )
 /*-----------------------------------------------------------*/
 
 #if( INCLUDE_xTaskCreateReplicated == 1 )
-    void xTaskSetCompareValue( CompareValue_t xNewCompareValue )
+    void vTaskSetCompareValue( CompareValue_t xNewCompareValue )
     {
         TCB_t * pxTCB = prvGetTCBFromHandle(NULL);
         configASSERT( pxTCB );
@@ -5512,7 +5507,7 @@ uint8_t ucTaskGetType( TaskHandle_t pxTaskHandle )
 
         configASSERT( pxStartTCB );
         configASSERT( pxStartTCB->pxNextTaskHandle );
-        configASSERT( pxStartTCB->ucTaskType == taskTYPE_REPLICATED );
+        configASSERT( pxStartTCB->eType == eReplicated );
 
         pxWorkTCB = pxStartTCB->pxNextTaskHandle;
 

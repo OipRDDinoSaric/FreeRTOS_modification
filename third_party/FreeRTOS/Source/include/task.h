@@ -101,6 +101,13 @@ typedef BaseType_t (*TaskHookFunction_t)( void * );
 
 #endif
 
+typedef enum
+{
+  eDefault = 0, /* Normal task previously available in freeRTOS. */
+  eTimed,       /* Timed task has a timer that tracks the execution time. */
+  eReplicated   /* Replicated task is replicated 2 or 3 times to introduce redundancy. */
+} eTaskType;
+
 /* Task states returned by eTaskGetState. */
 typedef enum
 {
@@ -619,20 +626,64 @@ TaskHandle_t xHandle = NULL;
                             RedundantValueErrorCb_t pxRedundantValueErrorCb );
 #endif
 
-
-// TODO Description
+/**
+* task. h
+* <pre>void xTaskSetCompareValue( CompareValue_t xNewCompareValue );</pre>
+*
+* Sets the compare value. Compare value is used with replicated tasks. They
+* are used in vTaskSyncAndCompare function for figuring if there is a
+* difference between the tied task executions.
+*
+* @param xNewCompareValue New compare value to set.
+*
+*
+* \defgroup vTaskSetCompareValue vTaskSetCompareValue
+* \ingroup TaskCtrl
+*/
 #if( INCLUDE_xTaskCreateReplicated == 1 )
-    void xTaskSetCompareValue( CompareValue_t xNewCompareValue );
+    void vTaskSetCompareValue( CompareValue_t xNewCompareValue );
 #endif
 
-// TODO Description
+/**
+* task. h
+* <pre>void vTaskTimedReset( TaskHandle_t pxTaskHandle );</pre>
+*
+* Reset the timer of the timed task.
+*
+* @param pxTaskHandle Handle of the task whose timer shall be reset.
+* Passing a NULL handle results in reseting the timer of the calling task.
+*
+* \defgroup vTaskTimedReset vTaskTimedReset
+* \ingroup TaskCtrl
+*/
 void vTaskTimedReset( TaskHandle_t pxTaskHandle );
 
-// TODO Description
-uint8_t ucTaskGetType( TaskHandle_t pxTaskHandle );
+/**
+* task. h
+* <pre>uint8_t ucTaskGetType( TaskHandle_t pxTaskHandle );</pre>
+*
+* Get the type of task. Valid values are from
+*
+* @param pxTaskHandle Handle of the task to be queried.  Passing a NULL
+* handle results in reseting the timer of calling task.
+*
+* \defgroup vTaskTimedReset vTaskTimedReset
+* \ingroup TaskCtrl
+*/
+eTaskType eTaskGetType( TaskHandle_t pxTaskHandle );
 
-// TODO Description
-// If null is passed that new compare value is not set.
+/**
+* task. h
+* <pre>void vTaskSyncAndCompare( const CompareValue_t * const pxNewCompareValue  );</pre>
+*
+* Get the type of task. Valid values are:
+*
+* @param pxTaskHandle Handle of the task to be queried.  Passing a NULL
+* handle results in reseting the timer of calling task.
+*
+* \defgroup vTaskTimedReset vTaskTimedReset
+* \ingroup TaskCtrl
+*/
 #if( INCLUDE_xTaskCreateReplicated == 1 )
     void vTaskSyncAndCompare( const CompareValue_t * const pxNewCompareValue  );
 #endif
