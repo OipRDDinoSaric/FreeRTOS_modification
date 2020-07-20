@@ -327,7 +327,7 @@ void vReplicatedTask( void * pvParameters )
 }
 ```
 
-## Genernal added functions
+## General added functions
 * [eTaskGetType](#cmd_eTaskGetType) : Returns the type of the input task.
 
 <a name="cmd_eTaskGetType"></a>
