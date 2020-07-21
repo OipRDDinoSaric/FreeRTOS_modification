@@ -120,7 +120,7 @@ TaskHandle_t xHandle = NULL;
    // must exist for the lifetime of the task, so in this case is declared static.  If it was just an
    // an automatic stack variable it might no longer exist, or at least have been corrupted, by the time
    // the new task attempts to access it.
-   xTaskCreate( vTaskCode, "NAME", STACK_SIZE, &ucParameterToPass, tskIDLE_PRIORITY, &xHandle, pdMS_TO_TICKS(1 * 1000), vTaskTimeoutCallback );
+   xTaskCreateTimed( vTaskCode, "NAME", STACK_SIZE, &ucParameterToPass, tskIDLE_PRIORITY, &xHandle, pdMS_TO_TICKS(1 * 1000), vTaskTimeoutCallback );
    configASSERT( xHandle );
 
    // Use the handle to delete the task.
@@ -276,7 +276,7 @@ TaskHandle_t xHandle = NULL;
     // must exist for the lifetime of the task, so in this case is declared static.  If it was just an
     // an automatic stack variable it might no longer exist, or at least have been corrupted, by the time
     // the new task attempts to access it.
-    xTaskCreate( vTaskCode, "NAME", STACK_SIZE, &ucParameterToPass, tskIDLE_PRIORITY, &xHandle, taskREPLICATED_RECOVERY, ucCompareErrorCb );
+    xTaskCreateReplicated( vTaskCode, "NAME", STACK_SIZE, &ucParameterToPass, tskIDLE_PRIORITY, &xHandle, taskREPLICATED_RECOVERY, ucCompareErrorCb );
     configASSERT( xHandle );
 
     // Use the handle to delete the task.
@@ -327,7 +327,7 @@ void vReplicatedTask( void * pvParameters )
 }
 ```
 
-## Genernal added functions
+## General added functions
 * [eTaskGetType](#cmd_eTaskGetType) : Returns the type of the input task.
 
 <a name="cmd_eTaskGetType"></a>
