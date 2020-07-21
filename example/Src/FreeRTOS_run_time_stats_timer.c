@@ -11,7 +11,8 @@
  *              - 7.1 m     - Boolean begins with is, e.g. is_example
  */
 
-#include "FreeRTOS_run_time_stats_timer.h"
+#include "../../example/Inc/FreeRTOS_run_time_stats_timer.h"
+
 #include "tim.h"
 
 #define ph_stats_timer &htim2

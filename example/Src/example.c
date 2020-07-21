@@ -1,8 +1,7 @@
 /**
- * @file user_app_template.c
+ * @file example.c
  *
- * @brief   Template for making a user application with update functionality.
- *          Meant to be used with the custom bootloader
+ * @brief   Example of usage of added FreeRTOS functionality.
  *
  * @note    Written according to BARR-C:2018 coding standard
  *          Exceptions:
@@ -14,11 +13,15 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "user_app_template.h"
-#include "stm32f4xx_hal.h"
-#include "FreeRTOS.h"
-#include "task.h"
-#include "timers.h"
+
+#include <stm32f4xx_hal.h>
+
+#include <FreeRTOS.h>
+#include <task.h>
+#include <timers.h>
+
+#include "example.h"
+#include "tests.h"
 
 #define LED_GREEN_Pin GPIO_PIN_12
 #define LED_GREEN_GPIO_Port GPIOD
@@ -53,8 +56,11 @@ static const uint8_t freeRTOSMemoryScheme = 4;
 
 uint32_t compare_fail = 0;
 
-void user_app_template_run (void)
+void example_run (void)
 {
+#if TESTS_RUN == 1
+    tests_run();
+#else
     xTaskCreate(vTask1, "T1", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
     xTaskCreate(vTask2, "T2", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
     xTaskCreateReplicated(vTask3, "T3", configMINIMAL_STACK_SIZE, NULL, 1, NULL,
@@ -64,7 +70,7 @@ void user_app_template_run (void)
 
     /* Give control to FreeRTOS */
     vTaskStartScheduler();
-
+#endif
 #   ifndef NDEBUG
     (void)freeRTOSMemoryScheme;
 #   endif
@@ -75,7 +81,7 @@ void vTask1 (void *pvParameters)
     for (;;)
     {
         printf("Task type of task %s is %d\n", pcTaskGetName(NULL),
-                ucTaskGetType(NULL));
+                eTaskGetType(NULL));
         HAL_GPIO_TogglePin(LED_RED_GPIO_Port, LED_RED_Pin);
         vTaskDelay(pdMS_TO_TICKS(2 * 1000));
     }
@@ -86,7 +92,7 @@ void vTask2 (void *pvParameters)
     for (;;)
     {
         printf("Task type of task %s is %d\n", pcTaskGetName(NULL),
-                ucTaskGetType(NULL));
+                eTaskGetType(NULL));
         HAL_GPIO_TogglePin(LED_BLUE_GPIO_Port, LED_BLUE_Pin);
         vTaskDelay(pdMS_TO_TICKS(1 * 1000));
     }
@@ -97,7 +103,7 @@ void vTask3 (void *pvParameters)
     for (;;)
     {
         printf("Task type of task %s is %d\n", pcTaskGetName(NULL),
-                ucTaskGetType(NULL));
+                eTaskGetType(NULL));
         HAL_GPIO_TogglePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin);
         vTaskDelay(pdMS_TO_TICKS(1 * 1000));
         if (HAL_GPIO_ReadPin(BTN_BLUE_GPIO_Port, BTN_BLUE_Pin) == pdTRUE)
@@ -114,7 +120,7 @@ void vTask4 (void *pvParameters)
     for (;;)
     {
         printf("Task type of task %s is %d\n", pcTaskGetName(NULL),
-                ucTaskGetType(NULL));
+                eTaskGetType(NULL));
         HAL_GPIO_TogglePin(LED_ORANGE_GPIO_Port, LED_ORANGE_Pin);
         vTaskDelay(pdMS_TO_TICKS(1 * 1000));
         if (HAL_GPIO_ReadPin(BTN_BLUE_GPIO_Port, BTN_BLUE_Pin) == pdTRUE)

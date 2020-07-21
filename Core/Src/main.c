@@ -29,8 +29,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "user_app_template.h"
 #include <stdio.h>
+
+#include "../../example/Inc/example.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -105,8 +106,11 @@ int main (void)
     MX_USART2_UART_Init();
     MX_TIM2_Init();
     /* USER CODE BEGIN 2 */
-    user_app_template_run();
 
+    example_run();
+
+    /* WARNING: NEVER REACHED */
+    /* WARNING: NEVER REACHED */
     /* WARNING: NEVER REACHED */
 
 #if 0
