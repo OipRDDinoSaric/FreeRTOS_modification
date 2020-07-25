@@ -16,7 +16,7 @@
 **
 **  Target      : STMicroelectronics STM32
 **
-**  Distribution: The file is distributed as is, without any warranty
+**  Distribution: The file is distributed “as is,” without any warranty
 **                of any kind.
 **
 *****************************************************************************
@@ -63,10 +63,7 @@ MEMORY
 {
 RAM (xrw)      : ORIGIN = 0x20000000, LENGTH = 128K
 CCMRAM (rw)      : ORIGIN = 0x10000000, LENGTH = 64K
-/* Allow application sector 4 through 7 */
-FLASH (rx)      : ORIGIN = 0x8010000, LENGTH = 448K 
-/* Allow sector 3 for app boot record */
-SEC3 (rx)		: ORIGIN = 0x800C000, LENGTH = 16K
+FLASH (rx)      : ORIGIN = 0x8000000, LENGTH = 1024K
 }
 
 /* Define output sections */
@@ -167,18 +164,7 @@ SECTIONS
     . = ALIGN(4);
     _eccmram = .;       /* create a global symbol at ccmram end */
   } >CCMRAM AT> FLASH
-  
-  /* Application boot record */
-  .appbr 0x800C000 (NOLOAD):
-  {
-    . = ALIGN(4);
-    _sappbr = .;       /* create a global symbol at appbr start */
-    *(.appbr)
-    *(.appbr*)
-    
-    . = ALIGN(4);
-    _eappbr = .;       /* create a global symbol at appbr end */
-  } >SEC3
+
   
   /* Uninitialized data section */
   . = ALIGN(4);
