@@ -7,7 +7,7 @@
 #define EXAMPLE_H
 
 #ifndef NDEBUG
-#   define TESTS_RUN 1 /*!< Determines if written tests will run. */
+#   define TEST_MODE 1 /*!< Determines if written tests will run. */
 #endif
 
 void example_run(void);

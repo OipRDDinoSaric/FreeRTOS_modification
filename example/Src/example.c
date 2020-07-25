@@ -9,10 +9,11 @@
  *              - 6.3 b iv. - ERR_CHECK() macro has return keyword
  *              - 7.1 m     - Boolean begins with is, e.g. is_example
  */
-#include <stdbool.h>
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include <stm32f4xx_hal.h>
 
@@ -22,6 +23,8 @@
 
 #include "example.h"
 #include "tests.h"
+
+#define PRIORITY_TESTS 1
 
 #define LED_GREEN_Pin GPIO_PIN_12
 #define LED_GREEN_GPIO_Port GPIOD
@@ -58,10 +61,19 @@ uint32_t compare_fail = 0;
 
 void example_run (void)
 {
-#if TESTS_RUN == 1
-    tests_run();
+#if TEST_MODE == 1
+
+    xTaskCreate(tests_task,
+                "Tests",
+                configMINIMAL_STACK_SIZE,
+                NULL,
+                PRIORITY_TESTS,
+                NULL);
+
+    /* Give control to FreeRTOS */
+    vTaskStartScheduler();
+    for(;;);
 #else
-    xTaskCreate(vTask1, "T1", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
     xTaskCreate(vTask2, "T2", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
     xTaskCreateReplicated(vTask3, "T3", configMINIMAL_STACK_SIZE, NULL, 1, NULL,
     taskREPLICATED_NO_RECOVERY, cmp_val_err_cb);
@@ -70,6 +82,7 @@ void example_run (void)
 
     /* Give control to FreeRTOS */
     vTaskStartScheduler();
+    for(;;);
 #endif
 #   ifndef NDEBUG
     (void)freeRTOSMemoryScheme;
@@ -122,7 +135,7 @@ void vTask4 (void *pvParameters)
         printf("Task type of task %s is %d\n", pcTaskGetName(NULL),
                 eTaskGetType(NULL));
         HAL_GPIO_TogglePin(LED_ORANGE_GPIO_Port, LED_ORANGE_Pin);
-        vTaskDelay(pdMS_TO_TICKS(1 * 1000));
+
         if (HAL_GPIO_ReadPin(BTN_BLUE_GPIO_Port, BTN_BLUE_Pin) == pdTRUE)
         {
             vTaskDelete(NULL);

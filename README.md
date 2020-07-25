@@ -16,6 +16,7 @@ Timed tasks have an ability to track their own execution time. On initialization
 
 * [xTaskCreateTimed](#cmd_xTaskCreateTimed) : Creates a timed task.
 * [vTaskTimedReset](#cmd_vTaskTimedReset) : Resets the timer of timed task.
+* [xTimerGetTaskHandle](#cmd_xTimerGetTaskHandle) : Gets the corresponding timed task handle from the timer handle.
 
 ### Functions
 <a name="cmd_xTaskCreateTimed"></a>
@@ -107,7 +108,7 @@ void vTaskTimeoutCallback ( WorstTimeTimerHandle_t xTimer )
   // Maybe task deletion is needed. Calling vTaskDelete automatically deletes
   // the timer too. Do NOT delete the timer directly. That will cause
   // undefined behavior when deleting the task.
-  vTaskDelete( pvTimerGetTimerID( xTimer ) );
+  vTaskDelete( xTimerGetTaskHandle( xTimer ) );
 }
 
 // Function that creates a task.
@@ -157,6 +158,25 @@ void vTimedTask( void * pvParameters )
 }
 ```
 
+<a name="cmd_xTimerGetTaskHandle"></a>
+```C
+TaskHandle_t xTimerGetTaskHandle( const TimerHandle_t xTimer )
+```
+Returns the timed task handle assigned to the timer. Task handle is an union
+with timer ID and that is why they are mutually exclusive.
+
+Task handle is assigned to the timer when creating the timed task.
+
+WARNING: Setting the timer ID also sets the task handle. Changing the timer
+ID can lead to undefined behavior.
+
+Input parameters:
+
+- xTimer - The timer being queried.
+
+Example usage:
+
+- See xTaskCreateTimed
 
 ## Replicated tasks (lockstep)
 

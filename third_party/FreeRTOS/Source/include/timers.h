@@ -385,6 +385,23 @@ typedef void (*PendedFunction_t)( void *, uint32_t );
 void *pvTimerGetTimerID( const TimerHandle_t xTimer ) PRIVILEGED_FUNCTION;
 
 /**
+ * TaskHandle_t xTimerGetTaskHandle( const TimerHandle_t xTimer );
+ *
+ * Returns the timed task handle assigned to the timer. Task handle is an union
+ * with timer ID and that is why they are mutually exclusive.
+ *
+ * Task handle is assigned to the timer when creating the timed task.
+ *
+ * WARNING: Setting the timer ID also sets the task handle. Changing the timer
+ * ID can lead to undefined behavior.
+ *
+ * @param xTimer The timer being queried.
+ *
+ * @return The timed task handle assigned to the timer being queried.
+ *
+ */
+TaskHandle_t xTimerGetTaskHandle( const TimerHandle_t xTimer ) PRIVILEGED_FUNCTION;
+/**
  * void vTimerSetTimerID( TimerHandle_t xTimer, void *pvNewID );
  *
  * Sets the ID assigned to the timer.

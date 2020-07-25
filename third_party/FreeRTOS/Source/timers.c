@@ -71,7 +71,11 @@ typedef struct tmrTimerControl
 	ListItem_t				xTimerListItem;		/*<< Standard linked list item as used by all kernel features for event management. */
 	TickType_t				xTimerPeriodInTicks;/*<< How quickly and often the timer expires. */
 	UBaseType_t				uxAutoReload;		/*<< Set to pdTRUE if the timer should be automatically restarted once expired.  Set to pdFALSE if the timer is, in effect, a one-shot timer. */
-	void 					*pvTimerID;			/*<< An ID to identify the timer.  This allows the timer to be identified when the same callback is used for multiple timers. */
+	union
+	{
+	    void 			    *pvTimerID;       	/*<< An ID to identify the timer.  This allows the timer to be identified when the same callback is used for multiple timers. */
+	    TaskHandle_t         xTaskHandle;       /*<< For timed tasks only! Stores the handle of the corresponding timed task. */
+	};
 	TimerCallbackFunction_t	pxCallbackFunction;	/*<< The function that will be called when the timer expires. */
 	#if( configUSE_TRACE_FACILITY == 1 )
 		UBaseType_t			uxTimerNumber;		/*<< An ID assigned by trace tools such as FreeRTOS+Trace */
@@ -984,15 +988,15 @@ void *pvTimerGetTimerID( const TimerHandle_t xTimer )
 Timer_t * const pxTimer = ( Timer_t * ) xTimer;
 void *pvReturn;
 
-	configASSERT( xTimer );
+    configASSERT( xTimer );
 
-	taskENTER_CRITICAL();
-	{
-		pvReturn = pxTimer->pvTimerID;
-	}
-	taskEXIT_CRITICAL();
+    taskENTER_CRITICAL();
+    {
+        pvReturn = pxTimer->pvTimerID;
+    }
+    taskEXIT_CRITICAL();
 
-	return pvReturn;
+    return pvReturn;
 }
 /*-----------------------------------------------------------*/
 
@@ -1000,13 +1004,30 @@ void vTimerSetTimerID( TimerHandle_t xTimer, void *pvNewID )
 {
 Timer_t * const pxTimer = ( Timer_t * ) xTimer;
 
-	configASSERT( xTimer );
+    configASSERT( xTimer );
 
-	taskENTER_CRITICAL();
-	{
-		pxTimer->pvTimerID = pvNewID;
-	}
-	taskEXIT_CRITICAL();
+    taskENTER_CRITICAL();
+    {
+        pxTimer->pvTimerID = pvNewID;
+    }
+    taskEXIT_CRITICAL();
+}
+/*-----------------------------------------------------------*/
+
+TaskHandle_t xTimerGetTaskHandle( const TimerHandle_t xTimer )
+{
+Timer_t * const pxTimer = ( Timer_t * ) xTimer;
+TaskHandle_t xReturn;
+
+    configASSERT( xTimer );
+
+    taskENTER_CRITICAL();
+    {
+        xReturn = pxTimer->xTaskHandle;
+    }
+    taskEXIT_CRITICAL();
+
+    return xReturn;
 }
 /*-----------------------------------------------------------*/
 
@@ -1101,7 +1122,7 @@ void vTimerWorstTimeCallback ( WorstTimeTimerHandle_t xTimer )
     }
 #   endif
 
-    for( ;; );
+    configASSERT( pdFAIL );
     /* Block indefinitely as a timed task's time overflowed */
 }
 

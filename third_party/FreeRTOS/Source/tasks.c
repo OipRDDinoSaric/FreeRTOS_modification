@@ -574,7 +574,7 @@ static void prvResetNextTaskUnblockTime( void );
                                      void * const pvParameters,
                                      UBaseType_t uxPriority,
                                      TaskHandle_t * const pxCreatedTask,
-                                     uint8_t ucTaskType,
+                                     uint8_t eType,
                                      TickType_t xWorstRunTime,
                                      WorstTimeTimerCb_t pxTimerCallback,
                                      RedundantValueErrorCb_t pxRedundantValueErrorCb );
@@ -852,7 +852,7 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB ) PRIVILEGED_FUNCTION;
 							         void * const pvParameters,
 							         UBaseType_t uxPriority,
 							         TaskHandle_t * const pxCreatedTask,
-							         uint8_t ucTaskType,
+							         eTaskType eType,
 							         TickType_t xWorstRunTime,
 							         WorstTimeTimerCb_t pxTimerCallback,
 							         RedundantValueErrorCb_t pxRedundantValueErrorCb
@@ -935,7 +935,7 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB ) PRIVILEGED_FUNCTION;
 			                      pxCreatedTask,
 			                      pxNewTCB,
 			                      NULL,
-			                      ucTaskType,
+			                      eType,
 			                      xWorstRunTime,
 			                      pxTimerCallback,
 			                      pxRedundantValueErrorCb );
