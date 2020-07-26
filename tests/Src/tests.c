@@ -6,111 +6,46 @@
 
 /*----------------------------------------------------------------------------*/
 
-#include <stdio.h>
+#include <ndebug_printf.h>
 
 #include <FreeRTOS.h>
-#include <semphr.h>
+#include <task.h>
 
 #include "tests.h"
 
-/*----------------------------------------------------------------------------*/
-
-typedef enum
-{
-    TEST_PASS = 0,
-    TEST_FAIL
-} test_status_t;
+#include "tests_timed_task.h"
+#include "tests_replicated_task.h"
+#include "tests_get_type.h"
 
 /*----------------------------------------------------------------------------*/
 
-static test_status_t tests_timed_task();
-
 /*----------------------------------------------------------------------------*/
 
-static test_status_t tests_replicated_task();
-
-/*----------------------------------------------------------------------------*/
-
-static test_status_t tests_get_type();
-
-/*----------------------------------------------------------------------------*/
-
-void tests_run(void)
+void tests_task(void * unused)
 {
     test_status_t test_status;
+    for(;;)
+    {
+#if 1
+        ndebug_printf("Testing timed tasks...");
+        test_status = tests_timed_task();
+        ndebug_printf("%s\n", TEST_PASS == test_status ? "OK" : "ERROR");
+#endif
 
-    printf("Testing timed tasks...");
-    test_status = tests_timed_task();
-    printf("%s\n", TEST_PASS == test_status ? "OK" : "ERROR");
+#if 1
+        ndebug_printf("Testing replicated tasks...");
+        test_status = tests_replicated_task();
+        ndebug_printf("%s\n", TEST_PASS == test_status ? "OK" : "ERROR");
+#endif
 
-    printf("Testing replicated tasks...");
-    test_status = tests_replicated_task();
-    printf("%s\n", TEST_PASS == test_status ? "OK" : "ERROR");
-
-    printf("Testing get task type...");
-    test_status = tests_get_type();
-    printf("%s\n", TEST_PASS == test_status ? "OK" : "ERROR");
+#if 1
+        ndebug_printf("Testing get task type...");
+        test_status = tests_get_type();
+        ndebug_printf("%s\n", TEST_PASS == test_status ? "OK" : "ERROR");
+#endif
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
 }
-
-/*----------------------------------------------------------------------------*/
-
-static test_status_t tests_timed_task()
-{
-    test_status_t test_status = TEST_FAIL;
-
-    return test_status;
-}
-
-/*----------------------------------------------------------------------------*/
-
-static test_status_t tests_replicated_task()
-{
-    test_status_t test_status = TEST_FAIL;
-
-    return test_status;
-}
-
-/*----------------------------------------------------------------------------*/
-
-#undef PRIORITY_DAEMON
-#undef PRIORITY_TEST
-#define PRIORITY_DAEMON 5
-#define PRIORITY_TEST   4
-
-static void get_type_daemon(test_status_t * test_status);
-static void get_type_task_timed(void);
-static void get_type_task_replicated(void);
-static void get_type_task_default(void);
-
-static SemaphoreHandle_t g_smph_test_done;
-
-static test_status_t tests_get_type()
-{
-    test_status_t test_status = TEST_PASS;
-
-    g_smph_test_done = xSemaphoreCreateBinary(); /* Not takeable. */
-
-    xTaskCreate(get_type_daemon,
-                "Type daemon",
-                configMINIMAL_STACK_SIZE,
-                &test_status, /* Will be available! */
-                PRIORITY_DAEMON,
-                NULL);
-
-    xSemaphoreTake(g_smph_test_done, portMAX_DELAY);
-
-    return test_status;
-}
-
-static void get_type_daemon(test_status_t * test_status)
-{
-    g_smph_subtest_done = xSemaphoreCreateBinary(); /* Not takeable. */
-
-    /* Create timed, replicated and default task with lower priority than daemon. */
-    /* Check their type. */
-}
-
-
 
 /*----------------------------------------------------------------------------*/
 

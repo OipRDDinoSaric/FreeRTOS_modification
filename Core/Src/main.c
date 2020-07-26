@@ -29,9 +29,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <stdio.h>
 
-#include "../../example/Inc/example.h"
+#include "example.h"
+#include <ndebug_printf.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -65,7 +65,6 @@ void MX_FREERTOS_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-extern void initialise_monitor_handles (void);
 /* USER CODE END 0 */
 
 /**
@@ -75,11 +74,6 @@ extern void initialise_monitor_handles (void);
 int main (void)
 {
     /* USER CODE BEGIN 1 */
-
-#ifndef NDEBUG
-    initialise_monitor_handles();
-    printf("Hello world!\r\n");
-#endif
 
     /* USER CODE END 1 */
 
@@ -106,6 +100,8 @@ int main (void)
     MX_USART2_UART_Init();
     MX_TIM2_Init();
     /* USER CODE BEGIN 2 */
+
+    ndebug_printf("FreeRTOS Modification.\n");
 
     example_run();
 

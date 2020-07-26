@@ -11,9 +11,10 @@
  */
 
 #include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+
+#include <ndebug_printf.h>
 
 #include <stm32f4xx_hal.h>
 
@@ -93,7 +94,7 @@ void vTask1 (void *pvParameters)
 {
     for (;;)
     {
-        printf("Task type of task %s is %d\n", pcTaskGetName(NULL),
+        ndebug_printf("Task type of task %s is %d\n", pcTaskGetName(NULL),
                 eTaskGetType(NULL));
         HAL_GPIO_TogglePin(LED_RED_GPIO_Port, LED_RED_Pin);
         vTaskDelay(pdMS_TO_TICKS(2 * 1000));
@@ -104,7 +105,7 @@ void vTask2 (void *pvParameters)
 {
     for (;;)
     {
-        printf("Task type of task %s is %d\n", pcTaskGetName(NULL),
+        ndebug_printf("Task type of task %s is %d\n", pcTaskGetName(NULL),
                 eTaskGetType(NULL));
         HAL_GPIO_TogglePin(LED_BLUE_GPIO_Port, LED_BLUE_Pin);
         vTaskDelay(pdMS_TO_TICKS(1 * 1000));
@@ -115,7 +116,7 @@ void vTask3 (void *pvParameters)
 {
     for (;;)
     {
-        printf("Task type of task %s is %d\n", pcTaskGetName(NULL),
+        ndebug_printf("Task type of task %s is %d\n", pcTaskGetName(NULL),
                 eTaskGetType(NULL));
         HAL_GPIO_TogglePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin);
         vTaskDelay(pdMS_TO_TICKS(1 * 1000));
@@ -132,7 +133,7 @@ void vTask4 (void *pvParameters)
 {
     for (;;)
     {
-        printf("Task type of task %s is %d\n", pcTaskGetName(NULL),
+        ndebug_printf("Task type of task %s is %d\n", pcTaskGetName(NULL),
                 eTaskGetType(NULL));
         HAL_GPIO_TogglePin(LED_ORANGE_GPIO_Port, LED_ORANGE_Pin);
 
@@ -149,13 +150,13 @@ uint8_t cmp_val_err_cb (CompareValue_t * pxCompareValues, uint8_t ucLen)
 {
     uint8_t ucIsTaskDeleteNeeded = pdTRUE;
 
-    printf("Compare values don't match:");
+    ndebug_printf("Compare values don't match:");
 
     for (uint32_t iii = 0; iii < ucLen; iii++)
     {
-        printf(" %lu", pxCompareValues[iii]);
+        ndebug_printf(" %lu", pxCompareValues[iii]);
     }
-    printf("\n");
+    ndebug_printf("\n");
 
     return ucIsTaskDeleteNeeded;
 }
@@ -170,8 +171,8 @@ void timer_cb_fnc (TimerHandle_t xTimer)
 
 #   ifndef NDEBUG
     {
-        printf("Timer %s overflowed. ", pcTimerGetName(xTimer));
-        printf("Task %s overflowed.\n", pcTaskGetName(ph_owner_task));
+        ndebug_printf("Timer %s overflowed. ", pcTimerGetName(xTimer));
+        ndebug_printf("Task %s overflowed.\n", pcTaskGetName(ph_owner_task));
     }
 #   endif
 
