@@ -1151,15 +1151,14 @@ UBaseType_t x;
 	/* Handles initialization of task type specific data */
 	switch( eType )
 	{
-
 	    case eTimed:
 	    {
 	        static uint8_t ucWorstTimeTimerID = 0;
 	        char pcTimerName[18] = "WorstTimeTimer";
 	        char pcTimerID[4];
 
-	        utoa(ucWorstTimeTimerID,pcTimerID,10);
-	        strlcat(pcTimerName, pcTimerID, sizeof(pcTimerName));
+	        utoa( ucWorstTimeTimerID, pcTimerID, 10 );
+	        strlcat( pcTimerName, pcTimerID, sizeof( pcTimerName ) );
 
 	        pxNewTCB->xWorstTimeTimer = xTimerCreate( pcTimerName,
                                                       xWorstRunTime,

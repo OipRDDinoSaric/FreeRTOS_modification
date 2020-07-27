@@ -43,7 +43,7 @@ void tests_task(void * unused)
         test_status = tests_get_type();
         ndebug_printf("%s\n", TEST_PASS == test_status ? "OK" : "ERROR");
 #endif
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(pdMS_TO_TICKS(4 * 1000));
     }
 }
 
