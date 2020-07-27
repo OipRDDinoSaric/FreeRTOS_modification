@@ -26,6 +26,7 @@ void tests_task(void * unused)
     test_status_t test_status;
     for(;;)
     {
+        ndebug_printf("\n\n");
 #if 1
         ndebug_printf("Testing timed tasks...");
         test_status = tests_timed_task();
@@ -38,7 +39,7 @@ void tests_task(void * unused)
         ndebug_printf("%s\n", TEST_PASS == test_status ? "OK" : "ERROR");
 #endif
 
-#if 1
+#if 0
         ndebug_printf("Testing get task type...");
         test_status = tests_get_type();
         ndebug_printf("%s\n", TEST_PASS == test_status ? "OK" : "ERROR");

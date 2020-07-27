@@ -28,7 +28,7 @@ static void delete_test_tasks(TaskHandle_t h_default,
 #undef TEST_TASK_PRIORITY
 #define TEST_TASK_PRIORITY 3
 
-#define TIMED_TIMEOUT 2 * 1000
+#define TIMED_TIMEOUT 2 * 1000 /* Enough to test type. */
 
 /******************************************************************************/
 
@@ -162,7 +162,7 @@ uint8_t compare_fail_cb(CompareValue_t * compare_values, uint8_t len)
 
 void timed_timeout_cb(WorstTimeTimerHandle_t h_timer)
 {
-
+    /* Never called. */
 }
 
 /******************************************************************************/

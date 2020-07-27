@@ -1165,6 +1165,8 @@ UBaseType_t x;
                                                       pdTRUE,
                                                       (void *) pxNewTCB,
                                                       pxTimerCallback );
+
+	        configASSERT(pxNewTCB->xWorstTimeTimer);
             ucWorstTimeTimerID++;
 
             /* Set unused handle values to default value */
