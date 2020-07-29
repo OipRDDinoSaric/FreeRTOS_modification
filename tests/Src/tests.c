@@ -27,19 +27,17 @@ void tests_task(void * unused)
     for(;;)
     {
         ndebug_printf("\n\n");
-#if 1
-        ndebug_printf("Testing timed tasks...");
-        test_status = tests_timed_task();
-        ndebug_printf("%s\n", TEST_PASS == test_status ? "OK" : "ERROR");
-#endif
-
-#if 1
-        ndebug_printf("Testing replicated tasks...");
-        test_status = tests_replicated_task();
-        ndebug_printf("%s\n", TEST_PASS == test_status ? "OK" : "ERROR");
-#endif
-
 #if 0
+        ndebug_printf("Testing timed tasks...");
+        tests_timed_task();
+#endif
+
+#if 1
+        ndebug_printf("Testing replicated tasks:\n");
+        tests_replicated_task();
+#endif
+
+#if 1
         ndebug_printf("Testing get task type...");
         test_status = tests_get_type();
         ndebug_printf("%s\n", TEST_PASS == test_status ? "OK" : "ERROR");

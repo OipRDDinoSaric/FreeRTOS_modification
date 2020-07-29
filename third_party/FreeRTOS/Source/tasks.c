@@ -1153,12 +1153,7 @@ UBaseType_t x;
 	{
 	    case eTimed:
 	    {
-	        static uint8_t ucWorstTimeTimerID = 0;
-	        char pcTimerName[18] = "WorstTimeTimer";
-	        char pcTimerID[4];
-
-	        utoa( ucWorstTimeTimerID, pcTimerID, 10 );
-	        strlcat( pcTimerName, pcTimerID, sizeof( pcTimerName ) );
+	        static char pcTimerName[18] = "WorstTimeTimer";
 
 	        pxNewTCB->xWorstTimeTimer = xTimerCreate( pcTimerName,
                                                       xWorstRunTime,
@@ -1167,7 +1162,6 @@ UBaseType_t x;
                                                       pxTimerCallback );
 
 	        configASSERT(pxNewTCB->xWorstTimeTimer);
-            ucWorstTimeTimerID++;
 
             /* Set unused handle values to default value */
             pxNewTCB->ucIsWaitingOnCompare = pdFALSE;

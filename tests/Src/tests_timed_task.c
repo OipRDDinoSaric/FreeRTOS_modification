@@ -37,24 +37,17 @@ void faster_timeout_cb(WorstTimeTimerHandle_t h_timer);
 static volatile bool isSuccess;
 
 /******************************************************************************/
-/**
- * @brief Tests for added timed task.
- */
-test_status_t tests_timed_task(void)
+
+void tests_timed_task(void)
 {
-    ndebug_printf("\n");
-    if(test_slower_than_timeout() != TEST_PASS)
-    {
-        ndebug_printf("Slower timed task failed.\n");
-        return TEST_FAIL;
-    }
+    ndebug_printf("   Test slower than timeout: %s\n",
+                  test_slower_than_timeout() == TEST_PASS?
+                  "OK": "FAIL");
 
-    if(test_faster_than_timeout() != TEST_PASS)
-    {
-        return TEST_FAIL;
-    }
+    ndebug_printf("    Test faster than timeout: %s\n",
+                  test_slower_than_timeout() == TEST_PASS?
+                  "OK": "FAIL");
 
-    return TEST_PASS;
 }
 
 /******************************************************************************/
@@ -72,8 +65,7 @@ test_status_t test_slower_than_timeout()
                      TEST_TASK_PRIORITY,
                      &h_timed,
                      TIMED_TIMEOUT,
-                     slower_timeout_cb
-                    );
+                     slower_timeout_cb);
 
     vTaskDelay(TIMED_TIMEOUT + 100);
 

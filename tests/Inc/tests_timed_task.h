@@ -11,7 +11,7 @@
 /**
  * @brief Tests for added timed task.
  */
-test_status_t tests_timed_task(void);
+void tests_timed_task(void);
 
 #endif /* TESTS_TIMED_TASK_H */
 /****END OF FILE****/
