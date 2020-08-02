@@ -63,8 +63,10 @@ int	ndebug_printf(const char *format, ...)
 {
     va_list args;
     va_start(args, format);
-    ndebug_printf_try(portMAX_DELAY, format, args);
+    int retval = ndebug_printf_try(portMAX_DELAY, format, args);
     va_end(args);
+
+    return retval;
 }
 
 
