@@ -27,7 +27,7 @@ void tests_task(void * unused)
     for(;;)
     {
         ndebug_printf("\n\n");
-#if 0
+#if 1
         ndebug_printf("Testing timed tasks...");
         tests_timed_task();
 #endif

@@ -7,7 +7,14 @@
 #define EXAMPLE_H
 
 #ifndef NDEBUG
-#   define TEST_MODE 1 /*!< Determines if written tests will run. */
+#   define TEST_MODE 0 /*!< Determines if written tests will run. */
+#else
+#endif
+
+#if 1 != TEST_MODE
+#   define EXAMPLE_DEFAULT    1
+#   define EXAMPLE_TIMED      0
+#   define EXAMPLE_REPLICATED 1
 #endif
 
 #define LED_GREEN_Pin        GPIO_PIN_12

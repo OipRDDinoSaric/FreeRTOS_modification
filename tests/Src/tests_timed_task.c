@@ -82,6 +82,7 @@ test_status_t test_slower_than_timeout()
 
 void task_slower(void * unused)
 {
+    vTaskTimedReset(NULL);
     vTaskDelay(portMAX_DELAY);
 }
 
@@ -129,9 +130,9 @@ void task_faster(void * unused)
 {
     while(true)
     {
-        vTaskDelay(TIMED_TIMEOUT - 100);
         ndebug_printf("Reseting faster task.\n");
         vTaskTimedReset(NULL);
+        vTaskDelay(TIMED_TIMEOUT - 100);
     }
 }
 

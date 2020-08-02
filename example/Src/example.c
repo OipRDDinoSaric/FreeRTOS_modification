@@ -20,22 +20,38 @@
 
 #include <FreeRTOS.h>
 #include <task.h>
-#include <timers.h>
 
 #include "example.h"
+#include "example_timed.h"
+#include "example_replicated.h"
+
 #include "tests.h"
 
-#define PRIORITY_TESTS 1
+/******************************************************************************/
 
+#if 1 == TEST_MODE
+#define PRIORITY_TESTS 1
+#else
+#define PRIORITY_DEFAULT              5
+#endif
 #ifndef NDEBUG
 /* Used for run time stats of heap */
 static const uint8_t freeRTOSMemoryScheme = 4;
 #endif
 
+/******************************************************************************/
+
+TaskHandle_t h_task_default              = NULL;
+
+/******************************************************************************/
+
+void task_default             (void * unused);
+
+/******************************************************************************/
+
 void example_run (void)
 {
 #if  1 == TEST_MODE
-
     xTaskCreate(tests_task,
                 "Tests",
                 configMINIMAL_STACK_SIZE,
@@ -43,7 +59,22 @@ void example_run (void)
                 PRIORITY_TESTS,
                 NULL);
 #else
+#if 1 == EXAMPLE_DEFAULT
+    xTaskCreate(task_default,
+                "Default task",
+                configMINIMAL_STACK_SIZE,
+                NULL,
+                PRIORITY_DEFAULT,
+                &h_task_default);
+#endif
 
+#if 1 == EXAMPLE_TIMED
+    example_timed_start();
+#endif
+
+#if 1 == EXAMPLE_REPLICATED
+    example_replicated_start();
+#endif
 #endif
 
     /* Give control to FreeRTOS */
@@ -54,5 +85,20 @@ void example_run (void)
     (void)freeRTOSMemoryScheme;
 #   endif
 }
+
+/******************************************************************************/
+
+
+void task_default(void * unused)
+{
+    while(true)
+    {
+        ndebug_printf("Task \"%s\" says hello world!\n", pcTaskGetName(NULL));
+        vTaskDelay(pdMS_TO_TICKS(5 * 1000));
+    }
+}
+
+/******************************************************************************/
+
 
 /****END OF FILE****/
