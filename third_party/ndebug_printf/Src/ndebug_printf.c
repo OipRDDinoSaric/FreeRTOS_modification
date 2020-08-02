@@ -6,13 +6,13 @@
 
 #include "ndebug_printf.h"
 
-#include <stdio.h>
 #include <stdarg.h>
 
 #include <usart.h>
 
 #include <FreeRTOS.h>
 #include <semphr.h>
+#include <task.h>
 
 #define PRINTF_UART_HANDLE huart2
 
@@ -38,8 +38,8 @@ bool ndebug_printf_lock(TickType_t block_time)
 {
 #ifndef NDEBUG
     init_if_needed();
-    return xSemaphoreTake(mutex_freertos_atomic, block_time)
-           == pdTRUE ? true: false;
+    return xSemaphoreTakeRecursive(mutex_freertos_atomic, block_time)
+                                   == pdTRUE ? true: false;
 #else
     return false;
 #endif
@@ -51,7 +51,7 @@ bool ndebug_printf_unlock()
 {
 #ifndef NDEBUG
     init_if_needed();
-    return xSemaphoreGive(mutex_freertos_atomic) == pdTRUE ? true: false;
+    return xSemaphoreGiveRecursive(mutex_freertos_atomic) == pdTRUE ? true: false;
 #else
     return false;
 #endif
@@ -61,12 +61,29 @@ bool ndebug_printf_unlock()
 
 int	ndebug_printf(const char *format, ...)
 {
-    va_list args;
-    va_start(args, format);
-    int retval = ndebug_printf_try(portMAX_DELAY, format, args);
-    va_end(args);
+#ifndef NDEBUG
 
-    return retval;
+    /**
+     * You might be wondering, why don't we just call the ndebug_printf_try...
+     * That doesn't work as it receives ..., and not va_list.
+     */
+
+    if(ndebug_printf_lock(portMAX_DELAY))
+    {
+        va_list args;
+        va_start(args, format);
+        int retval = vprintf(format, args);
+        va_end(args);
+        ndebug_printf_unlock();
+        return retval;
+    }
+    else
+    {
+        return -1;
+    }
+#else
+    return -1;
+#endif
 }
 
 
@@ -75,15 +92,14 @@ int	ndebug_printf(const char *format, ...)
 int ndebug_printf_try(TickType_t block_time, const char *format, ...)
 {
 #ifndef NDEBUG
-    va_list args;
 
-    init_if_needed();
-
-    if(xSemaphoreTake(mutex_freertos_atomic, block_time) == pdTRUE)
+    if(ndebug_printf_lock(block_time))
     {
+        va_list args;
         va_start(args, format);
         int retval = vprintf(format, args);
         va_end(args);
+        ndebug_printf_unlock();
         return retval;
     }
     else
