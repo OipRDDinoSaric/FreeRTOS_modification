@@ -16,8 +16,6 @@
 
 #define PRINTF_UART_HANDLE huart2
 
-static bool isInited = false;
-
 static SemaphoreHandle_t mutex_freertos_atomic = NULL;
 
 #ifdef __GNUC__
@@ -30,9 +28,16 @@ int fputc(int ch, FILE *f)
   return ch;
 }
 
+/******************************************************************************/
+
+static void init_if_needed(void);
+
+/******************************************************************************/
+
 bool ndebug_printf_lock(TickType_t block_time)
 {
 #ifndef NDEBUG
+    init_if_needed();
     return xSemaphoreTake(mutex_freertos_atomic, block_time)
            == pdTRUE ? true: false;
 #else
@@ -40,14 +45,19 @@ bool ndebug_printf_lock(TickType_t block_time)
 #endif
 }
 
+/******************************************************************************/
+
 bool ndebug_printf_unlock()
 {
 #ifndef NDEBUG
+    init_if_needed();
     return xSemaphoreGive(mutex_freertos_atomic) == pdTRUE ? true: false;
 #else
     return false;
 #endif
 }
+
+/******************************************************************************/
 
 int	ndebug_printf(const char *format, ...)
 {
@@ -58,17 +68,14 @@ int	ndebug_printf(const char *format, ...)
 }
 
 
+/******************************************************************************/
+
 int ndebug_printf_try(TickType_t block_time, const char *format, ...)
 {
 #ifndef NDEBUG
     va_list args;
 
-    if(!isInited)
-    {
-        isInited = true;
-        mutex_freertos_atomic = xSemaphoreCreateMutex();
-        xSemaphoreGive(mutex_freertos_atomic);
-    }
+    init_if_needed();
 
     if(xSemaphoreTake(mutex_freertos_atomic, block_time) == pdTRUE)
     {
@@ -84,8 +91,20 @@ int ndebug_printf_try(TickType_t block_time, const char *format, ...)
 #else
     return -1;
 #endif
-
 }
 
+/******************************************************************************/
+
+static void init_if_needed(void)
+{
+    static bool is_inited = false;
+
+    if(!is_inited)
+    {
+        is_inited = true;
+        mutex_freertos_atomic = xSemaphoreCreateMutex();
+        xSemaphoreGive(mutex_freertos_atomic);
+    }
+}
 
 /****END OF FILE****/
