@@ -1,17 +1,13 @@
 /**
- * @file ndebug_printf.c
+ * @file ndebug_printf.h
  *
- * @brief   Enable debug printing.
- *
+ * @brief   Enable debug printing. Thread safe, built on top of FreeRTOS.
  */
 
 #include "ndebug_printf.h"
 
-#ifndef NDEBUG
-
 #include <stdio.h>
 #include <stdarg.h>
-#include <stdbool.h>
 
 #include <usart.h>
 
@@ -34,36 +30,62 @@ int fputc(int ch, FILE *f)
   return ch;
 }
 
+bool ndebug_printf_lock(TickType_t block_time)
+{
+#ifndef NDEBUG
+    return xSemaphoreTake(mutex_freertos_atomic, block_time)
+           == pdTRUE ? true: false;
+#else
+    return false;
+#endif
+}
+
+bool ndebug_printf_unlock()
+{
+#ifndef NDEBUG
+    return xSemaphoreGive(mutex_freertos_atomic) == pdTRUE ? true: false;
+#else
+    return false;
+#endif
+}
 
 int	ndebug_printf(const char *format, ...)
 {
-	va_list args;
+    va_list args;
+    va_start(args, format);
+    ndebug_printf_try(portMAX_DELAY, format, args);
+    va_end(args);
+}
 
-	if(!isInited)
-	{
-	    isInited = true;
-	    mutex_freertos_atomic = xSemaphoreCreateMutex();
+
+int ndebug_printf_try(TickType_t block_time, const char *format, ...)
+{
+#ifndef NDEBUG
+    va_list args;
+
+    if(!isInited)
+    {
+        isInited = true;
+        mutex_freertos_atomic = xSemaphoreCreateMutex();
         xSemaphoreGive(mutex_freertos_atomic);
-	}
+    }
 
-	if(xSemaphoreTake(mutex_freertos_atomic, pdMS_TO_TICKS(2 * 1000)) == pdTRUE)
-	{
+    if(xSemaphoreTake(mutex_freertos_atomic, block_time) == pdTRUE)
+    {
         va_start(args, format);
         int retval = vprintf(format, args);
         va_end(args);
-        xSemaphoreGive(mutex_freertos_atomic);
         return retval;
-	}
-	else
-	{
-	    return -1;
-	}
+    }
+    else
+    {
+        return -1;
+    }
+#else
+    return -1;
+#endif
+
 }
 
-#else
-
-#define	ndebug_printf(ignore, ...) ((void)0u)
-
-#endif
 
 /****END OF FILE****/
