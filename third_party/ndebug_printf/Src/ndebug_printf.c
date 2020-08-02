@@ -31,6 +31,7 @@ int fputc(int ch, FILE *f)
 /******************************************************************************/
 
 static void init_if_needed(void);
+static int do_print(TickType_t block_time, const char *, va_list args);
 
 /******************************************************************************/
 
@@ -62,25 +63,13 @@ bool ndebug_printf_unlock()
 int	ndebug_printf(const char *format, ...)
 {
 #ifndef NDEBUG
+    va_list args;
 
-    /**
-     * You might be wondering, why don't we just call the ndebug_printf_try...
-     * That doesn't work as it receives ..., and not va_list.
-     */
+    va_start(args, format);
+    int retval = do_print(portMAX_DELAY, format, args);
+    va_end(args);
 
-    if(ndebug_printf_lock(portMAX_DELAY))
-    {
-        va_list args;
-        va_start(args, format);
-        int retval = vprintf(format, args);
-        va_end(args);
-        ndebug_printf_unlock();
-        return retval;
-    }
-    else
-    {
-        return -1;
-    }
+    return retval;
 #else
     return -1;
 #endif
@@ -92,20 +81,13 @@ int	ndebug_printf(const char *format, ...)
 int ndebug_printf_try(TickType_t block_time, const char *format, ...)
 {
 #ifndef NDEBUG
+    va_list args;
 
-    if(ndebug_printf_lock(block_time))
-    {
-        va_list args;
-        va_start(args, format);
-        int retval = vprintf(format, args);
-        va_end(args);
-        ndebug_printf_unlock();
-        return retval;
-    }
-    else
-    {
-        return -1;
-    }
+    va_start(args, format);
+    int retval = do_print(block_time, format, args);
+    va_end(args);
+
+    return retval;
 #else
     return -1;
 #endif
@@ -125,4 +107,20 @@ static void init_if_needed(void)
     }
 }
 
+/******************************************************************************/
+
+static int do_print(TickType_t block_time, const char * format, va_list args)
+{
+    init_if_needed();
+    if(ndebug_printf_lock(block_time))
+    {
+        int retval = vprintf(format, args);
+        ndebug_printf_unlock();
+        return retval;
+    }
+    else
+    {
+        return -1;
+    }
+}
 /****END OF FILE****/
