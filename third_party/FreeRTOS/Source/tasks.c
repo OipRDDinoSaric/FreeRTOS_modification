@@ -3103,10 +3103,19 @@ void vTaskSwitchContext( void )
 		/* Check for stack overflow, if configured. */
 		taskCHECK_FOR_STACK_OVERFLOW();
 
+		/* TODO If timed task stop the overrun timer. Called from Pend SVC.
+		   Call only excetion safe commands. */
+
 		/* Select a new task to run using either the generic C or port
 		optimised asm code. */
 		taskSELECT_HIGHEST_PRIORITY_TASK();
 		traceTASK_SWITCHED_IN();
+
+		/* TODO Add check if it is timed start overrun timer.
+		   Called from Pend SVC. Call only exception safe commands.
+		   if starting timer check if it woke taks with higher priority.  */
+
+		/* TODO Start the overflow timer if it is inactive e.i. first time starting the timed task. */
 
 		#if ( configUSE_NEWLIB_REENTRANT == 1 )
 		{
@@ -3115,6 +3124,7 @@ void vTaskSwitchContext( void )
 			_impure_ptr = &( pxCurrentTCB->xNewLib_reent );
 		}
 		#endif /* configUSE_NEWLIB_REENTRANT */
+
 	}
 }
 /*-----------------------------------------------------------*/
@@ -5444,15 +5454,18 @@ eTaskType eTaskGetType( TaskHandle_t pxTaskHandle )
             pxTCB->xCompareValue = *pxNewCompareValue;
         }
 
+        taskENTER_CRITICAL();
+
         if( prvIsLastArrivedRedundantTask( pxTCB ) == pdTRUE )
         {
+            taskEXIT_CRITICAL();
             uint8_t ucIsDeleteRequest = pdFALSE;
             if( prvIsCompareValueSame( pxTCB )  == pdFALSE )
             {
                 CompareValue_t pxCompareValues[taskREPLICATED_RECOVERY];
 
                 prvGetCompareValues( pxTCB, pxCompareValues,
-                                     pxTCB->ucReplicatedTaskType);
+                                     pxTCB->ucReplicatedTaskType );
 
                 ucIsDeleteRequest = pxTCB->pxRedundantValueErrorCb(
                                                   pxCompareValues,
@@ -5477,6 +5490,7 @@ eTaskType eTaskGetType( TaskHandle_t pxTaskHandle )
              * and suspend it */
             pxTCB->ucIsWaitingOnCompare = pdTRUE;
 
+            taskEXIT_CRITICAL();
             vTaskSuspend(NULL);
         }
     }
