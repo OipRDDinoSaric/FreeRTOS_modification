@@ -640,7 +640,7 @@ TickType_t xTimeNow;
                 case tmrCOMMAND_PAUSE_FROM_ISR: ; /* ; is to allow declaration. */
                     TickType_t xExpiryTime = xTimerGetExpiryTime( ( TimerHandle_t ) pxTimer );
 
-                    if(xExpiryTime >= xTimeNow)
+                    if( xExpiryTime >= xTimeNow )
                     {
                         pxTimer->xTimeLeftInTicks = xExpiryTime - xTimeNow; /* Message value is tick count on fcn call. */
                     }
@@ -648,6 +648,13 @@ TickType_t xTimeNow;
                     {
                         pxTimer->xTimeLeftInTicks = portMAX_DELAY - xTimeNow + xExpiryTime;
                     }
+
+                    if( pxTimer->xTimeLeftInTicks > pxTimer->xTimerPeriodInTicks)
+                    {
+                        /* Sanity check failed, correct it. */
+                        pxTimer->xTimeLeftInTicks = pxTimer->xTimerPeriodInTicks;
+                    }
+
                     break;
 
 				case tmrCOMMAND_CHANGE_PERIOD :
