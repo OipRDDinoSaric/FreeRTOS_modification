@@ -73,7 +73,6 @@ test_status_t test_slower_than_timeout()
 
     if(h_timed)
     {
-        ndebug_printf("Deleting slower timed task.\n");
         vTaskDelete(h_timed);
     }
 
@@ -84,7 +83,6 @@ test_status_t test_slower_than_timeout()
 
 void task_slower(void * unused)
 {
-    vTaskTimedReset(NULL);
     vTaskDelay(portMAX_DELAY);
 }
 
@@ -92,7 +90,6 @@ void task_slower(void * unused)
 
 void slower_timeout_cb(WorstTimeTimerHandle_t h_timer)
 {
-    ndebug_printf("Slower timeout triggered.\n");
     isSuccess = true;
 }
 
