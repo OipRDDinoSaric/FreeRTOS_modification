@@ -61,6 +61,8 @@ void example_timed_start(void)
                      NULL,
                      PRIORITY_TIMED_RESET_OK,
                      &h_task_timed_reset_ok,
+                     0,
+                     NULL,
                      TIMEOUT,
                      task_timed_reset_ok_cb
                      );
@@ -71,6 +73,8 @@ void example_timed_start(void)
                      NULL,
                      PRIORITY_TIMED_RESET_FAIL,
                      &h_task_timed_reset_ok,
+                     0,
+                     NULL,
                      TIMEOUT,
                      task_timed_reset_fail_cb
                      );
@@ -81,6 +85,8 @@ void example_timed_start(void)
                      NULL,
                      PRIORITY_TIMED_RESET_FAIL_DEL,
                      &h_task_timed_reset_ok,
+                     0,
+                     NULL,
                      TIMEOUT,
                      task_timed_reset_fail_del_cb
                      );

@@ -64,6 +64,8 @@ test_status_t test_slower_than_timeout()
                      NULL,
                      TEST_TASK_PRIORITY,
                      &h_timed,
+                     0,
+                     NULL,
                      TIMED_TIMEOUT,
                      slower_timeout_cb);
 
@@ -108,6 +110,8 @@ test_status_t test_faster_than_timeout()
                      NULL,
                      TEST_TASK_PRIORITY,
                      &h_timed,
+                     0,
+                     NULL,
                      TIMED_TIMEOUT,
                      faster_timeout_cb
                     );

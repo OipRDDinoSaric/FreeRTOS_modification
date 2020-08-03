@@ -14,6 +14,7 @@
 #include "tests.h"
 
 #include "tests_timed_task.h"
+#include "tests_timer_additions.h"
 #include "tests_replicated_task.h"
 #include "tests_get_type.h"
 
@@ -27,17 +28,22 @@ void tests_task(void * unused)
     for(;;)
     {
         ndebug_printf("\n\n");
-#if 1
-        ndebug_printf("Testing timed tasks...");
+#if 0
+        ndebug_printf("Testing timed tasks:\n");
         tests_timed_task();
 #endif
 
 #if 1
+        ndebug_printf("Testing timer additions:\n");
+        tests_timer_add_task();
+#endif
+
+#if 0
         ndebug_printf("Testing replicated tasks:\n");
         tests_replicated_task();
 #endif
 
-#if 1
+#if 0
         ndebug_printf("Testing get task type...");
         test_status = tests_get_type();
         ndebug_printf("%s\n", TEST_PASS == test_status ? "OK" : "ERROR");

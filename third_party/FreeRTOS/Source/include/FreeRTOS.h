@@ -1050,15 +1050,16 @@ typedef struct xSTATIC_TCB
 	uint8_t     ucDummy22;
 
     #if ( INCLUDE_xTaskCreateTimed == 1 )
-	    void        *xDummy23;
+    void        *xDummy23;
+    void        *xDummy24;
     #endif
 
     #if ( INCLUDE_xTaskCreateReplicated == 1 )
-	    uint8_t     ucDummy24;
-	    void        *pxDummy25;
-	    uint32_t    xDummy26;
-	    void        *xDummy27;
-	    uint8_t ucDummy28;
+	    uint8_t     ucDummy25;
+	    void        *pxDummy26;
+	    uint32_t    xDummy27;
+	    void        *xDummy28;
+	    uint8_t     ucDummy29;
 	#endif
 } StaticTask_t;
 
@@ -1155,13 +1156,14 @@ typedef struct xSTATIC_TIMER
 	StaticListItem_t	xDummy2;
 	TickType_t			xDummy3;
 	UBaseType_t			uxDummy4;
-	void 				*pvDummy5[ 2 ];
+	TickType_t          xDummy5;
+	void 				*pvDummy6[ 2 ];
 	#if( configUSE_TRACE_FACILITY == 1 )
-		UBaseType_t		uxDummy6;
+		UBaseType_t		uxDummy7;
 	#endif
 
 	#if( ( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) )
-		uint8_t 		ucDummy7;
+		uint8_t 		ucDummy8;
 	#endif
 
 } StaticTimer_t;

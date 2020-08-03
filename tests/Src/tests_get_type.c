@@ -65,6 +65,8 @@ test_status_t tests_get_type(void)
                         NULL,
                         TEST_TASK_PRIORITY,
                         &h_timed,
+                        0,
+                        NULL,
                         TIMED_TIMEOUT,
                         timed_timeout_cb
                        ) != pdPASS)

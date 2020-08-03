@@ -79,7 +79,6 @@
 #define configTIMER_TASK_PRIORITY                ( configMAX_PRIORITIES - 1 )
 #define configTIMER_QUEUE_LENGTH                 10
 #define configTIMER_TASK_STACK_DEPTH             256
-#define configMAX_TIMER_NAME_LEN                 ( 20 )
 
 /* Tracing defines */
 #ifndef NDEBUG
@@ -118,6 +117,8 @@ to exclude the API function. */
 #else
  #define configPRIO_BITS         4
 #endif
+
+#define configCHECK_FOR_STACK_OVERFLOW 1
 
 /* The lowest interrupt priority that can be used in a call to a "set priority"
 function. */

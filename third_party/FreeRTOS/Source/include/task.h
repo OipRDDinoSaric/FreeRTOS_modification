@@ -420,7 +420,7 @@ BaseType_t xTaskCreateTimed( TaskFunction_t pxTaskCode,
  *
  * @param pvCreatedTask Used to pass back a handle by which the created task
  * can be referenced.
- *
+ * TODO Comment
  * @param xWorstRunTime Worst run time in ticks. Function creates a timer with
  * timeout specified with xWorstRunTime
  *
@@ -494,8 +494,10 @@ void vTaskTimeoutCallback ( WorstTimeTimerHandle_t xTimer )
                         void * const pvParameters,
                         UBaseType_t uxPriority,
                         TaskHandle_t * const pxCreatedTask,
-                        TickType_t xWorstRunTime,
-                        WorstTimeTimerCb_t pxTimerCallback );
+                        TickType_t xOverrunTime,
+                        WorstTimeTimerCb_t pxOverrunTimerCb,
+                        TickType_t xOverflowTime,
+                        WorstTimeTimerCb_t pxOverflowTimerCb);
 #endif
 
 /**

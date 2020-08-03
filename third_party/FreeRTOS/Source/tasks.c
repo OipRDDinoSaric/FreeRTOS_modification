@@ -339,15 +339,16 @@ typedef struct tskTaskControlBlock
 	eTaskType eType; /*< TCB can be defined as default, timed and replicated depending on redundancy chosen. */
 
     #if ( INCLUDE_xTaskCreateTimed == 1 )
-        TimerHandle_t xWorstTimeTimer; /*< Timer used for tracking the worst time of execution */
+        TimerHandle_t xOverflowTimer; /*< Timer used for tracking the worst time of execution asynchronously. */
+        TimerHandle_t xOverrunTimer;  /*< Timer only running while task is running. */
     #endif
 
     #if ( INCLUDE_xTaskCreateReplicated == 1 )
         uint8_t ucIsWaitingOnCompare; /*< Boolean value used to signalize task it is waiting for comparison of tasks */
         TaskHandle_t pxNextTaskHandle; /*< When using replicated tasks points to next task in replicated group, 1->2->3->1... */
-        CompareValue_t xCompareValue; /*< Value to compare with other tasks */
-        RedundantValueErrorCb_t pxRedundantValueErrorCb; /*< Callback that is used when redundant task's values don't match */
-        uint8_t ucReplicatedTaskType; /*< Defines number of redundant tasks. Valid 2 or 3 */
+        CompareValue_t xCompareValue; /*< Value to compare with other tasks. */
+        RedundantValueErrorCb_t pxRedundantValueErrorCb; /*< Callback that is used when redundant task's values don't match. */
+        uint8_t ucReplicatedTaskType; /*< Defines number of redundant tasks. Valid 2 or 3. */
     #endif
 } tskTCB;
 
@@ -392,7 +393,11 @@ PRIVILEGED_DATA static volatile BaseType_t xNumOfOverflows 			= ( BaseType_t ) 0
 PRIVILEGED_DATA static UBaseType_t uxTaskNumber 					= ( UBaseType_t ) 0U;
 PRIVILEGED_DATA static volatile TickType_t xNextTaskUnblockTime		= ( TickType_t ) 0U; /* Initialised to portMAX_DELAY before the scheduler starts. */
 PRIVILEGED_DATA static TaskHandle_t xIdleTaskHandle					= NULL;			/*< Holds the handle of the idle task.  The idle task is created automatically when the scheduler is started. */
-
+/* Context switch function can be called from ISR and usually it is. It is
+called from portable layer without input variables. This global variable
+acts as an flag when calling vTaskSwitchContext from user space. It shall
+be set before accessing vTaskSwitchContext not from ISR. */
+PRIVILEGED_DATA static UBaseType_t xSwitchContextFromISR            = pdTRUE;
 /* Context switches are held pending while the scheduler is suspended.  Also,
 interrupts must not manipulate the xStateListItem of a TCB, or any of the
 lists the xStateListItem can be referenced from, if the scheduler is suspended.
@@ -569,15 +574,17 @@ static void prvResetNextTaskUnblockTime( void );
  */
 #if configSUPPORT_DYNAMIC_ALLOCATION
     static BaseType_t prvTaskCreateGeneric( TaskFunction_t pxTaskCode,
-                                     const char * const pcName,     /*lint !e971 Unqualified char types are allowed for strings and single characters only. */
-                                     const configSTACK_DEPTH_TYPE usStackDepth,
-                                     void * const pvParameters,
-                                     UBaseType_t uxPriority,
-                                     TaskHandle_t * const pxCreatedTask,
-                                     uint8_t eType,
-                                     TickType_t xWorstRunTime,
-                                     WorstTimeTimerCb_t pxTimerCallback,
-                                     RedundantValueErrorCb_t pxRedundantValueErrorCb );
+                                            const char * const pcName,     /*lint !e971 Unqualified char types are allowed for strings and single characters only. */
+                                            const configSTACK_DEPTH_TYPE usStackDepth,
+                                            void * const pvParameters,
+                                            UBaseType_t uxPriority,
+                                            TaskHandle_t * const pxCreatedTask,
+                                            uint8_t eType,
+                                            TickType_t xOverrunTime,
+                                            WorstTimeTimerCb_t pxOverrunTimerCb,
+                                            TickType_t xOverflowTime,
+                                            WorstTimeTimerCb_t pxOverflowTimerCb,
+                                            RedundantValueErrorCb_t pxRedundantValueErrorCb ) PRIVILEGED_FUNCTION;
 #endif
 
 
@@ -594,8 +601,10 @@ static void prvInitialiseNewTask(   TaskFunction_t pxTaskCode,
                                     TCB_t *pxNewTCB,
                                     const MemoryRegion_t * const xRegions,
                                     eTaskType eType,
-                                    TickType_t xWorstRunTime,
-                                    WorstTimeTimerCb_t pxTimerCallback,
+                                    TickType_t xOverrunTime,
+                                    WorstTimeTimerCb_t pxOverrunTimerCb,
+                                    TickType_t xOverflowTime,
+                                    WorstTimeTimerCb_t pxOverflowTimerCb,
                                     RedundantValueErrorCb_t pxRedundantValueErrorCb ) PRIVILEGED_FUNCTION;
 
 /*
@@ -716,6 +725,8 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB ) PRIVILEGED_FUNCTION;
 			                      eDefault,
 			                      0,
 			                      NULL,
+                                  0,
+                                  NULL,
 			                      NULL );
 			prvAddNewTaskToReadyList( pxNewTCB );
 		}
@@ -843,20 +854,24 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB ) PRIVILEGED_FUNCTION;
                                      eDefault,
                                      0,
                                      NULL,
+                                     0,
+                                     NULL,
                                      NULL );
     }
 
 	static BaseType_t prvTaskCreateGeneric( TaskFunction_t pxTaskCode,
-							         const char * const pcName,		/*lint !e971 Unqualified char types are allowed for strings and single characters only. */
-							         const configSTACK_DEPTH_TYPE usStackDepth,
-							         void * const pvParameters,
-							         UBaseType_t uxPriority,
-							         TaskHandle_t * const pxCreatedTask,
-							         eTaskType eType,
-							         TickType_t xWorstRunTime,
-							         WorstTimeTimerCb_t pxTimerCallback,
-							         RedundantValueErrorCb_t pxRedundantValueErrorCb
-							         )
+							                const char * const pcName,		/*lint !e971 Unqualified char types are allowed for strings and single characters only. */
+							                const configSTACK_DEPTH_TYPE usStackDepth,
+							                void * const pvParameters,
+							                UBaseType_t uxPriority,
+                                            TaskHandle_t * const pxCreatedTask,
+                                            eTaskType eType,
+                                            TickType_t xOverrunTime,
+                                            WorstTimeTimerCb_t pxOverrunTimerCb,
+                                            TickType_t xOverflowTime,
+                                            WorstTimeTimerCb_t pxOverflowTimerCb,
+                                            RedundantValueErrorCb_t pxRedundantValueErrorCb
+							               )
 	{
 	TCB_t *pxNewTCB;
 	BaseType_t xReturn;
@@ -936,8 +951,10 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB ) PRIVILEGED_FUNCTION;
 			                      pxNewTCB,
 			                      NULL,
 			                      eType,
-			                      xWorstRunTime,
-			                      pxTimerCallback,
+                                  xOverrunTime,
+                                  pxOverrunTimerCb,
+                                  xOverflowTime,
+                                  pxOverflowTimerCb,
 			                      pxRedundantValueErrorCb );
 			prvAddNewTaskToReadyList( pxNewTCB );
 			xReturn = pdPASS;
@@ -962,8 +979,10 @@ static void prvInitialiseNewTask( 	TaskFunction_t pxTaskCode,
 									TCB_t *pxNewTCB,
 									const MemoryRegion_t * const xRegions,
 									eTaskType eType,
-									TickType_t xWorstRunTime,
-									WorstTimeTimerCb_t pxTimerCallback,
+                                    TickType_t xOverrunTime,
+                                    WorstTimeTimerCb_t pxOverrunTimerCb,
+									TickType_t xOverflowTime,
+									WorstTimeTimerCb_t pxOverflowTimerCb,
 									RedundantValueErrorCb_t pxRedundantValueErrorCb )
 {
 StackType_t *pxTopOfStack;
@@ -1153,17 +1172,42 @@ UBaseType_t x;
 	{
 	    case eTimed:
 	    {
-	        static char pcTimerName[18] = "WorstTimeTimer";
+            if( ( xOverflowTime != 0 ) && ( pxOverflowTimerCb != NULL ) )
+            {
+                static char pcOverflowName[18] = "OverflowTimer";
+                pxNewTCB->xOverflowTimer = xTimerCreate( pcOverflowName,
+                                                         xOverflowTime,
+                                                         pdTRUE,
+                                                         (void *) pxNewTCB,
+                                                         pxOverflowTimerCb );
 
-	        pxNewTCB->xWorstTimeTimer = xTimerCreate( pcTimerName,
-                                                      xWorstRunTime,
-                                                      pdTRUE,
-                                                      (void *) pxNewTCB,
-                                                      pxTimerCallback );
+                /* If stuck here, timer could not be created. */
+                configASSERT(pxNewTCB->xOverflowTimer);
+            }
+            else
+            {
+                pxNewTCB->xOverflowTimer = NULL;
+            }
 
-	        configASSERT(pxNewTCB->xWorstTimeTimer);
+            if( ( xOverrunTime != 0 ) && ( pxOverrunTimerCb != NULL ) )
+            {
+                static char pcOverrunName[18] = "OverrunTimer";
 
-            /* Set unused handle values to default value */
+                pxNewTCB->xOverrunTimer = xTimerCreate( pcOverrunName,
+                                                        xOverrunTime,
+                                                        pdTRUE,
+                                                        (void *) pxNewTCB,
+                                                        pxOverrunTimerCb );
+
+                /* If stuck here, timer could not be created. */
+                configASSERT(pxNewTCB->xOverflowTimer);
+            }
+            else
+            {
+                pxNewTCB->xOverrunTimer = NULL;
+            }
+
+            /* Set unused handle values to default value. */
             pxNewTCB->ucIsWaitingOnCompare = pdFALSE;
             pxNewTCB->pxNextTaskHandle = NULL;
             pxNewTCB->xCompareValue = 0;
@@ -1177,16 +1221,18 @@ UBaseType_t x;
 	        pxNewTCB->ucIsWaitingOnCompare = pdFALSE;
 	        pxNewTCB->pxRedundantValueErrorCb = pxRedundantValueErrorCb;
 
-            /* Set unused handle values to default value */
-            pxNewTCB->xWorstTimeTimer = NULL;
+            /* Set unused handle values to default value. */
+            pxNewTCB->xOverflowTimer = NULL;
+            pxNewTCB->xOverrunTimer  = NULL;
 	    }
 	    break;
 
         case eDefault:
         default:
         {
-            /* Set unused handle values to default value */
-            pxNewTCB->xWorstTimeTimer = NULL;
+            /* Set unused handle values to default value. */
+            pxNewTCB->xOverflowTimer = NULL;
+            pxNewTCB->xOverrunTimer  = NULL;
 
             pxNewTCB->ucIsWaitingOnCompare = pdFALSE;
             pxNewTCB->pxNextTaskHandle = NULL;
@@ -1339,11 +1385,17 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB )
 
                 /* Delete the timer for tracing the worst time of the task
                 if it is being used */
-                if( pxTCB->xWorstTimeTimer != NULL )
+                if( pxTCB->xOverflowTimer != NULL )
                 {
-                    xTimerDelete( pxTCB->xWorstTimeTimer, portMAX_DELAY );
+                    xTimerDelete( pxTCB->xOverflowTimer, portMAX_DELAY );
                 }
 
+                /* Delete the timer for tracing the worst runtime of the task
+                if it is being used */
+                if( pxTCB->xOverrunTimer != NULL )
+                {
+                    xTimerDelete( pxTCB->xOverrunTimer, portMAX_DELAY );
+                }
                 /* Get next TCB for when when using task replication */
                 if( NULL != pxTCB->pxNextTaskHandle )
                 {
@@ -1925,6 +1977,7 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB )
 				}
 				else
 				{
+				    xSwitchContextFromISR = pdFALSE;
 					vTaskSwitchContext();
 				}
 			}
@@ -3062,6 +3115,8 @@ BaseType_t xSwitchRequired = pdFALSE;
 
 void vTaskSwitchContext( void )
 {
+    /* IF USING FROM USER SPACE SET xSwitchContextFromISR to pdFALSE! */
+
 	if( uxSchedulerSuspended != ( UBaseType_t ) pdFALSE )
 	{
 		/* The scheduler is currently suspended - do not allow a context
@@ -3103,19 +3158,70 @@ void vTaskSwitchContext( void )
 		/* Check for stack overflow, if configured. */
 		taskCHECK_FOR_STACK_OVERFLOW();
 
-		/* TODO If timed task stop the overrun timer. Called from Pend SVC.
-		   Call only excetion safe commands. */
+        #if INCLUDE_xTaskCreateTimed == 0
+		{
+            if( pxCurrentTCB->xOverrunTimer != NULL )
+            {
+                if( pdTRUE == xSwitchContextFromISR )
+                {
+                    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+                    xTimerStopFromISR( pxCurrentTCB->xOverrunTimer,
+                                       xHigherPriorityTaskWoken );
+                }
+                else
+                {
+                    /* Could be potential problem with waiting indefinitely.
+                       If program is stuck here increase the size of timer
+                       input queue or if pausing of overrun timer is not
+                       priority lower the delay */
+                    xTimerStop( pxCurrentTCB->xOverrunTimer, portMAX_DELAY );
+                }
+            }
+		}
+        #endif
 
 		/* Select a new task to run using either the generic C or port
 		optimised asm code. */
 		taskSELECT_HIGHEST_PRIORITY_TASK();
 		traceTASK_SWITCHED_IN();
 
-		/* TODO Add check if it is timed start overrun timer.
-		   Called from Pend SVC. Call only exception safe commands.
-		   if starting timer check if it woke taks with higher priority.  */
+        #if INCLUDE_xTaskCreateTimed == 0
+		{
+            if( pxCurrentTCB->xOverflowTimer != NULL )
+            {
+                if( pdTRUE == xSwitchContextFromISR )
+                {
+                }
+                else
+                {
+                    if( xTimerIsTimerActive( pxCurrentTCB->xOverflowTimer ) ==
+                        pdFALSE )
+                    {
+                        /* This is the first time starting the timed task, start
+                           the overflow timer. */
+                        xTimerStart( pxCurrentTCB->xOverflowTimer,
+                                     portMAX_DELAY );
+                    }
+                }
+            }
 
-		/* TODO Start the overflow timer if it is inactive e.i. first time starting the timed task. */
+            if( pxCurrentTCB->xOverrunTimer != NULL )
+            {
+            /* TODO Add check if it is timed start overrun timer.
+               Called from Pend SVC. Call only exception safe commands.
+               if starting timer check if it woke taks with higher priority.  */
+                if( pdTRUE == xSwitchContextFromISR )
+                {
+
+                }
+                else
+                {
+
+                }
+            }
+		}
+        #endif
 
 		#if ( configUSE_NEWLIB_REENTRANT == 1 )
 		{
@@ -3124,7 +3230,7 @@ void vTaskSwitchContext( void )
 			_impure_ptr = &( pxCurrentTCB->xNewLib_reent );
 		}
 		#endif /* configUSE_NEWLIB_REENTRANT */
-
+		xSwitchContextFromISR = pdTRUE;
 	}
 }
 /*-----------------------------------------------------------*/
@@ -5255,15 +5361,11 @@ of a task */
                             void * const pvParameters,
                             UBaseType_t uxPriority,
                             TaskHandle_t * const pxCreatedTask,
-                            TickType_t xWorstRunTime,
-                            WorstTimeTimerCb_t pxTimerCallback )
+                            TickType_t xOverrunTime,
+                            WorstTimeTimerCb_t pxOverrunTimerCb,
+                            TickType_t xOverflowTime,
+                            WorstTimeTimerCb_t pxOverflowTimerCb )
     {
-
-        if( pxTimerCallback == NULL )
-        {
-            pxTimerCallback = vTimerWorstTimeCallback;
-        }
-
         return prvTaskCreateGeneric(pxTaskCode,
                                     pcName,
                                     usStackDepth,
@@ -5271,8 +5373,10 @@ of a task */
                                     uxPriority,
                                     pxCreatedTask,
                                     eTimed,
-                                    xWorstRunTime,
-                                    pxTimerCallback,
+                                    xOverrunTime,
+                                    pxOverrunTimerCb,
+                                    xOverflowTime,
+                                    pxOverflowTimerCb,
                                     NULL );
     }
 #endif
@@ -5285,7 +5389,15 @@ void vTaskTimedReset( TaskHandle_t pxTaskHandle )
 
     configASSERT( pxTaskToTimeReset->eType == eTimed );
 
-    xTimerReset( pxTaskToTimeReset->xWorstTimeTimer, 0 );
+    if(pxTaskToTimeReset->xOverflowTimer != NULL)
+    {
+        xTimerReset( pxTaskToTimeReset->xOverflowTimer, 0 );
+    }
+
+    if(pxTaskToTimeReset->xOverrunTimer != NULL)
+    {
+        xTimerReset( pxTaskToTimeReset->xOverrunTimer, 0 );
+    }
 }
 
 /*-----------------------------------------------------------*/
@@ -5329,6 +5441,8 @@ eTaskType eTaskGetType( TaskHandle_t pxTaskHandle )
                                         eReplicated,
                                         0,
                                         NULL,
+                                        0,
+                                        NULL,
                                         pxRedundantValueErrorCb );
 
         if( pdPASS != xReturn )
@@ -5344,6 +5458,8 @@ eTaskType eTaskGetType( TaskHandle_t pxTaskHandle )
                                        uxPriority,
                                        &pxInternalTaskHandle2,
                                        eReplicated,
+                                       0,
+                                       NULL,
                                        0,
                                        NULL,
                                        pxRedundantValueErrorCb );
@@ -5374,6 +5490,8 @@ eTaskType eTaskGetType( TaskHandle_t pxTaskHandle )
                                             uxPriority,
                                             &pxInternalTaskHandle3,
                                             eReplicated,
+                                            0,
+                                            NULL,
                                             0,
                                             NULL,
                                             pxRedundantValueErrorCb );
@@ -5501,7 +5619,7 @@ eTaskType eTaskGetType( TaskHandle_t pxTaskHandle )
 #if( INCLUDE_xTaskCreateReplicated == 1 )
     void vTaskSetCompareValue( CompareValue_t xNewCompareValue )
     {
-        TCB_t * pxTCB = prvGetTCBFromHandle(NULL);
+        TCB_t * pxTCB = prvGetTCBFromHandle( NULL );
         configASSERT( pxTCB );
 
         pxTCB->xCompareValue = xNewCompareValue;

@@ -59,13 +59,17 @@ or interrupt version of the queue send function should be used. */
 #define tmrCOMMAND_STOP							( ( BaseType_t ) 3 )
 #define tmrCOMMAND_CHANGE_PERIOD				( ( BaseType_t ) 4 )
 #define tmrCOMMAND_DELETE						( ( BaseType_t ) 5 )
+#define tmrCOMMAND_RESUME                       ( ( BaseType_t ) 6 )
+#define tmrCOMMAND_PAUSE                        ( ( BaseType_t ) 7 )
 
-#define tmrFIRST_FROM_ISR_COMMAND				( ( BaseType_t ) 6 )
-#define tmrCOMMAND_START_FROM_ISR				( ( BaseType_t ) 6 )
-#define tmrCOMMAND_RESET_FROM_ISR				( ( BaseType_t ) 7 )
-#define tmrCOMMAND_STOP_FROM_ISR				( ( BaseType_t ) 8 )
-#define tmrCOMMAND_CHANGE_PERIOD_FROM_ISR		( ( BaseType_t ) 9 )
 
+#define tmrFIRST_FROM_ISR_COMMAND				( ( BaseType_t ) 8 )
+#define tmrCOMMAND_START_FROM_ISR				( ( BaseType_t ) 8 )
+#define tmrCOMMAND_RESET_FROM_ISR				( ( BaseType_t ) 9 )
+#define tmrCOMMAND_STOP_FROM_ISR				( ( BaseType_t ) 10 )
+#define tmrCOMMAND_CHANGE_PERIOD_FROM_ISR		( ( BaseType_t ) 11 )
+#define tmrCOMMAND_RESUME_FROM_ISR              ( ( BaseType_t ) 12 )
+#define tmrCOMMAND_PAUSE_FROM_ISR               ( ( BaseType_t ) 13 )
 
 /**
  * Type by which software timers are referenced.  For example, a call to
@@ -561,6 +565,12 @@ TaskHandle_t xTimerGetTimerDaemonTaskHandle( void ) PRIVILEGED_FUNCTION;
  */
 #define xTimerStop( xTimer, xTicksToWait ) xTimerGenericCommand( ( xTimer ), tmrCOMMAND_STOP, 0U, NULL, ( xTicksToWait ) )
 
+// TODO document
+#define xTimerResume( xTimer, xTicksToWait ) xTimerGenericCommand( ( xTimer ), tmrCOMMAND_RESUME, ( xTaskGetTickCount() ), NULL, ( xTicksToWait ) )
+
+// TODO document
+#define xTimerPause( xTimer, xTicksToWait ) xTimerGenericCommand( ( xTimer ), tmrCOMMAND_PAUSE, 0U, NULL, ( xTicksToWait ) )
+
 /**
  * BaseType_t xTimerChangePeriod( 	TimerHandle_t xTimer,
  *										TickType_t xNewPeriod,
@@ -952,6 +962,13 @@ TaskHandle_t xTimerGetTimerDaemonTaskHandle( void ) PRIVILEGED_FUNCTION;
  */
 #define xTimerStopFromISR( xTimer, pxHigherPriorityTaskWoken ) xTimerGenericCommand( ( xTimer ), tmrCOMMAND_STOP_FROM_ISR, 0, ( pxHigherPriorityTaskWoken ), 0U )
 
+// TODO Document
+#define xTimerResumeFromISR( xTimer, pxHigherPriorityTaskWoken ) xTimerGenericCommand( ( xTimer ), tmrCOMMAND_PAUSE_FROM_ISR, ( xTaskGetTickCountFromISR() ), ( pxHigherPriorityTaskWoken ), 0U )
+
+// TODO Document
+#define xTimerPauseFromISR( xTimer, pxHigherPriorityTaskWoken ) xTimerGenericCommand( ( xTimer ), tmrCOMMAND_PAUSE_FROM_ISR, 0U, ( pxHigherPriorityTaskWoken ), 0U )
+
+
 /**
  * BaseType_t xTimerChangePeriodFromISR( TimerHandle_t xTimer,
  *										 TickType_t xNewPeriod,
@@ -1111,6 +1128,8 @@ TaskHandle_t xTimerGetTimerDaemonTaskHandle( void ) PRIVILEGED_FUNCTION;
  */
 #define xTimerResetFromISR( xTimer, pxHigherPriorityTaskWoken ) xTimerGenericCommand( ( xTimer ), tmrCOMMAND_RESET_FROM_ISR, ( xTaskGetTickCountFromISR() ), ( pxHigherPriorityTaskWoken ), 0U )
 
+// TODO Document
+BaseType_t xTimerIsTimerActiveFromISR( TimerHandle_t xTimer ) PRIVILEGED_FUNCTION;
 
 /**
  * BaseType_t xTimerPendFunctionCallFromISR( PendedFunction_t xFunctionToPend,
@@ -1284,12 +1303,6 @@ BaseType_t xTimerGenericCommand( TimerHandle_t xTimer, const BaseType_t xCommand
 	void vTimerSetTimerNumber( TimerHandle_t xTimer, UBaseType_t uxTimerNumber ) PRIVILEGED_FUNCTION;
 	UBaseType_t uxTimerGetTimerNumber( TimerHandle_t xTimer ) PRIVILEGED_FUNCTION;
 #endif
-
-/*
- * Used for default callback when creating timed task. Called when timed task
- * doesn't refresh timer from counting out.
- */
-void vTimerWorstTimeCallback ( TimerHandle_t xTimer );
 
 #ifdef __cplusplus
 }
