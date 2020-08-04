@@ -546,6 +546,8 @@ TickType_t xTimeNow;
 			software timer. */
 			pxTimer = xMessage.u.xTimerParameters.pxTimer;
 
+            TickType_t xExpiryTime = xTimerGetExpiryTime( ( TimerHandle_t ) pxTimer );
+
 			if( listIS_CONTAINED_WITHIN( NULL, &( pxTimer->xTimerListItem ) ) == pdFALSE ) /*lint !e961. The cast is only redundant when NULL is passed into the macro. */
 			{
 				/* The timer is in a list, remove it. */
@@ -637,9 +639,7 @@ TickType_t xTimeNow;
                     break;
 
                 case tmrCOMMAND_PAUSE:
-                case tmrCOMMAND_PAUSE_FROM_ISR: ; /* ; is to allow declaration. */
-                    TickType_t xExpiryTime = xTimerGetExpiryTime( ( TimerHandle_t ) pxTimer );
-
+                case tmrCOMMAND_PAUSE_FROM_ISR:
                     if( xExpiryTime >= xTimeNow )
                     {
                         pxTimer->xTimeLeftInTicks = xExpiryTime - xTimeNow; /* Message value is tick count on fcn call. */
@@ -651,10 +651,9 @@ TickType_t xTimeNow;
 
                     if( pxTimer->xTimeLeftInTicks > pxTimer->xTimerPeriodInTicks)
                     {
-                        /* Sanity check failed, correct it. */
+                        /* Sanity check failed, correct the data. */
                         pxTimer->xTimeLeftInTicks = pxTimer->xTimerPeriodInTicks;
                     }
-
                     break;
 
 				case tmrCOMMAND_CHANGE_PERIOD :

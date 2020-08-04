@@ -20,11 +20,14 @@
 
 /*----------------------------------------------------------------------------*/
 
+static void single_timed_task(void * unused);
+void overrun_cb(WorstTimeTimerHandle_t h_timer);
+void overflow_cb(WorstTimeTimerHandle_t h_timer);
+
 /*----------------------------------------------------------------------------*/
 
 void tests_task(void * unused)
 {
-    test_status_t test_status;
     for(;;)
     {
         ndebug_printf("\n\n");
@@ -38,20 +41,58 @@ void tests_task(void * unused)
         tests_timer_add_task();
 #endif
 
-#if 1
+#if 0
         ndebug_printf("Testing replicated tasks:\n");
         tests_replicated_task();
 #endif
 
-#if 1
+#if 0
         ndebug_printf("Testing get task type...");
-        test_status = tests_get_type();
+        test_status_t test_status = tests_get_type();
         ndebug_printf("%s\n", TEST_PASS == test_status ? "OK" : "ERROR");
 #endif
-        vTaskDelay(pdMS_TO_TICKS(4 * 1000));
+        vTaskDelay(pdMS_TO_TICKS(2 * 1000));
     }
 }
 
 /*----------------------------------------------------------------------------*/
 
+void tests_single_timed()
+{
+    xTaskCreateTimed(single_timed_task,
+                     "Single timed",
+                     configMINIMAL_STACK_SIZE,
+                     NULL,
+                     1,
+                     NULL,
+                     pdMS_TO_TICKS(100),
+                     overrun_cb,
+                     pdMS_TO_TICKS(1000),
+                     overflow_cb);
+    ndebug_printf("If overrun timer and overflow timer are"
+                  " not triggered soon there is a problem.\n");
+}
+
+/*----------------------------------------------------------------------------*/
+void overrun_cb(WorstTimeTimerHandle_t h_timer)
+{
+    ndebug_printf("Overrun callback triggered!\n");
+}
+
+/*----------------------------------------------------------------------------*/
+
+void overflow_cb(WorstTimeTimerHandle_t h_timer)
+{
+    ndebug_printf("Overflow callback triggered!\n");
+}
+
+/*----------------------------------------------------------------------------*/
+
+static void single_timed_task(void * unused)
+{
+    while(true)
+    {
+        vTaskDelay(portMAX_DELAY);
+    }
+}
 /****END OF FILE****/

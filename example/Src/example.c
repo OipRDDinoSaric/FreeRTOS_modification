@@ -52,12 +52,16 @@ void task_default             (void * unused);
 void example_run (void)
 {
 #if  1 == TEST_MODE
+#if 1 == TIMED_TEST_SINGLE_TIMED
+    tests_single_timed();
+#else
     xTaskCreate(tests_task,
                 "Tests",
                 configMINIMAL_STACK_SIZE,
                 NULL,
                 PRIORITY_TESTS,
                 NULL);
+#endif
 #else
 #if 1 == EXAMPLE_DEFAULT
     xTaskCreate(task_default,

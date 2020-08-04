@@ -25,38 +25,38 @@
 
 /******************************************************************************/
 
-test_status_t test_slower_than_timeout();
-test_status_t test_faster_than_timeout();
+test_status_t test_slower_than_oflow_timeout();
+test_status_t test_faster_than_oflow_timeout();
 void task_slower(void * unused);
 void task_faster(void * unused);
-void slower_timeout_cb(WorstTimeTimerHandle_t h_timer);
-void faster_timeout_cb(WorstTimeTimerHandle_t h_timer);
+void slower_oflow_timeout_cb(WorstTimeTimerHandle_t h_timer);
+void faster_oflow_timeout_cb(WorstTimeTimerHandle_t h_timer);
 
 /******************************************************************************/
 
-static volatile bool isSuccess;
+static volatile bool g_is_success;
 
 /******************************************************************************/
 
 void tests_timed_task(void)
 {
-    ndebug_printf("   Test slower than timeout: %s\n",
-                  test_slower_than_timeout() == TEST_PASS?
+    ndebug_printf("    Test slower than overflow timeout...%s\n",
+                  test_slower_than_oflow_timeout() == TEST_PASS?
                   "OK": "FAIL");
 
-    ndebug_printf("    Test faster than timeout: %s\n",
-                  test_slower_than_timeout() == TEST_PASS?
+    ndebug_printf("    Test faster than overflow timeout...%s\n",
+                  test_faster_than_oflow_timeout() == TEST_PASS?
                   "OK": "FAIL");
 
 }
 
 /******************************************************************************/
 
-test_status_t test_slower_than_timeout()
+test_status_t test_slower_than_oflow_timeout()
 {
     TaskHandle_t h_timed = NULL;
 
-    isSuccess = false;
+    g_is_success = false;
 
     xTaskCreateTimed(task_slower,
                      "slower",
@@ -67,16 +67,16 @@ test_status_t test_slower_than_timeout()
                      0,
                      NULL,
                      TIMED_TIMEOUT,
-                     slower_timeout_cb);
+                     slower_oflow_timeout_cb);
 
-    vTaskDelay(TIMED_TIMEOUT + 100);
+    vTaskDelay(TIMED_TIMEOUT + 50);
 
     if(h_timed)
     {
         vTaskDelete(h_timed);
     }
 
-    return isSuccess ? TEST_PASS : TEST_FAIL;
+    return g_is_success ? TEST_PASS : TEST_FAIL;
 }
 
 /******************************************************************************/
@@ -88,21 +88,21 @@ void task_slower(void * unused)
 
 /******************************************************************************/
 
-void slower_timeout_cb(WorstTimeTimerHandle_t h_timer)
+void slower_oflow_timeout_cb(WorstTimeTimerHandle_t h_timer)
 {
-    isSuccess = true;
+    g_is_success = true;
 }
 
 /******************************************************************************/
 
-test_status_t test_faster_than_timeout()
+test_status_t test_faster_than_oflow_timeout()
 {
     TaskHandle_t h_timed = NULL;
 
-    isSuccess = true;
+    g_is_success = true;
 
     xTaskCreateTimed(task_faster,
-                     "slower",
+                     "faster",
                      configMINIMAL_STACK_SIZE,
                      NULL,
                      TEST_TASK_PRIORITY,
@@ -110,19 +110,17 @@ test_status_t test_faster_than_timeout()
                      0,
                      NULL,
                      TIMED_TIMEOUT,
-                     faster_timeout_cb
+                     faster_oflow_timeout_cb
                     );
 
-    vTaskDelay(TIMED_TIMEOUT + 100);
+    vTaskDelay(TIMED_TIMEOUT * 4);
 
     if(h_timed)
     {
-        ndebug_printf("Deleting faster timed task.\n");
         vTaskDelete(h_timed);
     }
 
-    return isSuccess ? TEST_PASS : TEST_FAIL;
-    return TEST_PASS;
+    return g_is_success ? TEST_PASS : TEST_FAIL;
 }
 
 /******************************************************************************/
@@ -131,18 +129,16 @@ void task_faster(void * unused)
 {
     while(true)
     {
-        ndebug_printf("Reseting faster task.\n");
+        vTaskDelay(TIMED_TIMEOUT - 50);
         vTaskTimedReset(NULL);
-        vTaskDelay(TIMED_TIMEOUT - 100);
     }
 }
 
 /******************************************************************************/
 
-void faster_timeout_cb(WorstTimeTimerHandle_t h_timer)
+void faster_oflow_timeout_cb(WorstTimeTimerHandle_t h_timer)
 {
-    ndebug_printf("Faster timeout triggered.\n");
-    isSuccess = false;
+    g_is_success = false;
 }
 
 /******************************************************************************/

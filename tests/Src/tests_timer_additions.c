@@ -45,7 +45,6 @@ void tests_timer_add_task(void)
         ndebug_printf("Can't create test timer.");
         return;
     }
-
     ndebug_printf("   Start...%s\n",
                   test_start() == TEST_PASS?
                   "OK": "FAIL");

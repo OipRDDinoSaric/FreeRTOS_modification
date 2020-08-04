@@ -20,7 +20,7 @@
 
 /******************************************************************************/
 
-static bool isSuccess = true;
+static bool g_is_success = true;
 
 /******************************************************************************/
 
@@ -89,7 +89,7 @@ test_status_t test_shall_not_call_callback(void)
         vTaskDelete(h_shall_not_call);
     }
 
-    return isSuccess ? TEST_PASS: TEST_FAIL;
+    return g_is_success ? TEST_PASS: TEST_FAIL;
 }
 
 static const CompareValue_t shall_not_call_value = 10;
@@ -105,7 +105,7 @@ static void task_shall_not_call(void * unused)
 
 uint8_t shall_not_call_cb(CompareValue_t * pxCompareValues, uint8_t ucLen)
 {
-    isSuccess = false;
+    g_is_success = false;
 
     return pdTRUE;
 }
@@ -134,7 +134,7 @@ test_status_t test_shall_not_call_recovery_callback(void)
         vTaskDelete(h_shall_not_call);
     }
 
-    return isSuccess ? TEST_PASS: TEST_FAIL;
+    return g_is_success ? TEST_PASS: TEST_FAIL;
 }
 
 static const CompareValue_t shall_not_call_value_recovery = 10;
@@ -150,7 +150,7 @@ static void task_shall_not_call_recovery(void * unused)
 
 uint8_t shall_not_call_recovery_cb(CompareValue_t * pxCompareValues, uint8_t ucLen)
 {
-    isSuccess = false;
+    g_is_success = false;
 
     return pdTRUE;
 }
@@ -164,7 +164,7 @@ test_status_t test_shall_call_recovery_callback(void)
 {
     TaskHandle_t h_shall_call = NULL;
 
-    isSuccess = false;
+    g_is_success = false;
 
     xTaskCreateReplicated(task_shall_call_recovery,
                           "Call",
@@ -182,7 +182,7 @@ test_status_t test_shall_call_recovery_callback(void)
         vTaskDelete(h_shall_call);
     }
 
-    return isSuccess ? TEST_PASS: TEST_FAIL;
+    return g_is_success ? TEST_PASS: TEST_FAIL;
 }
 
 static CompareValue_t shall_call_value_recovery = 10;
@@ -200,7 +200,7 @@ static void task_shall_call_recovery(void * unused)
 
 uint8_t shall_call_recovery_cb(CompareValue_t * pxCompareValues, uint8_t ucLen)
 {
-    isSuccess = true;
+    g_is_success = true;
 
     return pdFALSE;
 }
@@ -214,7 +214,7 @@ test_status_t test_shall_call_callback(void)
 {
     TaskHandle_t h_shall_call = NULL;
 
-    isSuccess = false;
+    g_is_success = false;
 
     xTaskCreateReplicated(task_shall_call,
                           "Call",
@@ -232,7 +232,7 @@ test_status_t test_shall_call_callback(void)
         vTaskDelete(h_shall_call);
     }
 
-    return isSuccess ? TEST_PASS: TEST_FAIL;
+    return g_is_success ? TEST_PASS: TEST_FAIL;
 }
 
 static CompareValue_t shall_call_value = 10;
@@ -250,7 +250,7 @@ static void task_shall_call(void * unused)
 
 uint8_t shall_call_cb(CompareValue_t * pxCompareValues, uint8_t ucLen)
 {
-    isSuccess = true;
+    g_is_success = true;
 
     return pdFALSE;
 }
@@ -264,7 +264,7 @@ test_status_t test_shall_not_call_recovery_callback_setCompare(void)
 {
     TaskHandle_t h_shall_call = NULL;
 
-    isSuccess = true;
+    g_is_success = true;
 
     xTaskCreateReplicated(task_shall_not_call_setCompare,
                           "Not call",
@@ -282,7 +282,7 @@ test_status_t test_shall_not_call_recovery_callback_setCompare(void)
         vTaskDelete(h_shall_call);
     }
 
-    return isSuccess ? TEST_PASS: TEST_FAIL;
+    return g_is_success ? TEST_PASS: TEST_FAIL;
 }
 
 static const CompareValue_t shall_not_call_setCompare_value = 10;
@@ -301,7 +301,7 @@ static void task_shall_not_call_setCompare(void * unused)
 
 uint8_t shall_not_call_setCompare_cb(CompareValue_t * pxCompareValues, uint8_t ucLen)
 {
-    isSuccess = false;
+    g_is_success = false;
 
     return pdFALSE;
 }
@@ -315,7 +315,7 @@ test_status_t test_shall_call_recovery_callback_setCompare(void)
 {
     TaskHandle_t h_shall_call = NULL;
 
-    isSuccess = false;
+    g_is_success = false;
 
     xTaskCreateReplicated(task_shall_call_setCompare,
                           "Call",
@@ -333,7 +333,7 @@ test_status_t test_shall_call_recovery_callback_setCompare(void)
         vTaskDelete(h_shall_call);
     }
 
-    return isSuccess ? TEST_PASS: TEST_FAIL;
+    return g_is_success ? TEST_PASS: TEST_FAIL;
 }
 
 static CompareValue_t shall_call_setCompare_value = 10;
@@ -351,7 +351,7 @@ static void task_shall_call_setCompare(void * unused)
 
 uint8_t shall_call_setCompare_cb(CompareValue_t * pxCompareValues, uint8_t ucLen)
 {
-    isSuccess = true;
+    g_is_success = true;
 
     return pdFALSE;
 }

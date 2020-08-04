@@ -17,5 +17,10 @@ typedef enum
  */
 void tests_task(void * unused);
 
+/**
+ * @brief Starts special test that requires only one timed task.
+ */
+void tests_single_timed();
+
 #endif /* TESTS_H */
 /****END OF FILE****/

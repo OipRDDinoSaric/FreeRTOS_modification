@@ -1174,7 +1174,7 @@ UBaseType_t x;
 	    {
             if( ( xOverflowTime != 0 ) && ( pxOverflowTimerCb != NULL ) )
             {
-                static char pcOverflowName[18] = "OverflowTimer";
+                static char pcOverflowName[] = "OverflowTimer";
                 pxNewTCB->xOverflowTimer = xTimerCreate( pcOverflowName,
                                                          xOverflowTime,
                                                          pdTRUE,
@@ -1191,7 +1191,7 @@ UBaseType_t x;
 
             if( ( xOverrunTime != 0 ) && ( pxOverrunTimerCb != NULL ) )
             {
-                static char pcOverrunName[18] = "OverrunTimer";
+                static char pcOverrunName[] = "OverrunTimer";
 
                 pxNewTCB->xOverrunTimer = xTimerCreate( pcOverrunName,
                                                         xOverrunTime,
@@ -1200,7 +1200,7 @@ UBaseType_t x;
                                                         pxOverrunTimerCb );
 
                 /* If stuck here, timer could not be created. */
-                configASSERT(pxNewTCB->xOverflowTimer);
+                configASSERT(pxNewTCB->xOverrunTimer);
             }
             else
             {
@@ -3155,40 +3155,37 @@ void vTaskSwitchContext( void )
 		}
 		#endif /* configGENERATE_RUN_TIME_STATS */
 
-		/* Check for stack overflow, if configured. */
-		taskCHECK_FOR_STACK_OVERFLOW();
-
-        #if INCLUDE_xTaskCreateTimed == 1
-		{
-            if( pxCurrentTCB->xOverrunTimer != NULL )
-            {
-                if( pdTRUE == xSwitchContextFromISR )
-                {
-                    BaseType_t xHigherPriorityTaskWoken = pdFALSE; /* Unused. */
-
-                    xTimerPauseFromISR( pxCurrentTCB->xOverrunTimer,
-                                       &xHigherPriorityTaskWoken );
-                }
-                else
-                {
-                    /* Could be potential problem with waiting indefinitely.
-                       If program is stuck here increase the size of timer
-                       input queue or if pausing of overrun timer is not
-                       priority lower the delay. */
-                    xTimerPause( pxCurrentTCB->xOverrunTimer, portMAX_DELAY );
-                }
-            }
-		}
-        #endif
-
         BaseType_t xHigherPriorityTaskWoken;
         do
         {
+            /* Check for stack overflow, if configured. */
+            taskCHECK_FOR_STACK_OVERFLOW();
+            #if INCLUDE_xTaskCreateTimed == 1 && 0
+            {
+                if( pxCurrentTCB->xOverrunTimer != NULL )
+                {
+                    if( pdTRUE == xSwitchContextFromISR )
+                    {
+                        xTimerPauseFromISR( pxCurrentTCB->xOverrunTimer, NULL );
+                    }
+                    else
+                    {
+                        /* Could be potential problem with waiting indefinitely.
+                           If program is stuck here increase the size of timer
+                           input queue or if pausing of overrun timer is not
+                           priority lower the delay. */
+                        xTimerPause( pxCurrentTCB->xOverrunTimer, portMAX_DELAY );
+                    }
+                }
+            }
+            #endif
+
             /* Select a new task to run using either the generic C or port
             optimised asm code. */
             taskSELECT_HIGHEST_PRIORITY_TASK();
 
             xHigherPriorityTaskWoken = pdFALSE;
+
             #if INCLUDE_xTaskCreateTimed == 1
             {
                 if( pxCurrentTCB->xOverflowTimer != NULL )
@@ -3221,7 +3218,10 @@ void vTaskSwitchContext( void )
                         }
                     }
                 }
-
+            }
+            #endif
+            #if INCLUDE_xTaskCreateTimed == 1 && 0
+            {
                 if( pxCurrentTCB->xOverrunTimer != NULL )
                 {
                     if( pdTRUE == xSwitchContextFromISR )
@@ -3237,12 +3237,13 @@ void vTaskSwitchContext( void )
                           priority lower the delay. */
                         xTimerResume( pxCurrentTCB->xOverrunTimer,
                                       portMAX_DELAY );
+
                     }
                 }
             }
             #endif
         }
-        while( xHigherPriorityTaskWoken == pdTRUE );
+        while( pdTRUE == xHigherPriorityTaskWoken );
 
         traceTASK_SWITCHED_IN();
 
