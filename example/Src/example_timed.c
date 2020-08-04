@@ -33,7 +33,7 @@
 #define PRIORITY_TIMED_RESET_FAIL     3
 #define PRIORITY_TIMED_RESET_FAIL_DEL 3
 
-#define TIMEOUT pdMS_TO_TICKS(500)
+#define TIMEOUT pdMS_TO_TICKS(3 * 1000)
 
 /******************************************************************************/
 
@@ -96,7 +96,7 @@ void example_timed_start(void)
 
 void task_timed_reset_ok_cb(WorstTimeTimerHandle_t timer)
 {
-    ndebug_printf("Task \"%s\" overflowed. Something is wrong here.\n",
+    ndebug_printf("Task \"%s\" overflowed. This shouldn't happen.\n",
                   pcTaskGetName(xTimerGetTaskHandle(timer)));
 }
 
@@ -115,16 +115,16 @@ void task_timed_reset_ok(void * unused)
 
 void task_timed_reset_fail_cb(WorstTimeTimerHandle_t timer)
 {
-    ndebug_printf("Task \"%s\" overflowed. This happens every 500 ms.\n",
+    ndebug_printf("Task \"%s\" overflowed. This happens every 3 s.\n",
                   pcTaskGetName(xTimerGetTaskHandle(timer)));
 }
 
 void task_timed_reset_fail(void * unused)
 {
+    vTaskDelay(pdMS_TO_TICKS(900));
     while(true)
     {
-        vTaskDelay(TIMEOUT + 100);
-        vTaskTimedReset(NULL);
+        vTaskDelay(portMAX_DELAY);
     }
 }
 
@@ -141,6 +141,7 @@ void task_timed_reset_fail_del_cb(WorstTimeTimerHandle_t timer)
 
 void task_timed_reset_fail_del(void * unused)
 {
+    vTaskDelay(pdMS_TO_TICKS(1900));
     while(true)
     {
         vTaskDelay(TIMEOUT + 100);

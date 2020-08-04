@@ -5415,12 +5415,12 @@ void vTaskTimedReset( TaskHandle_t pxTaskHandle )
 
     if(pxTaskToTimeReset->xOverflowTimer != NULL)
     {
-        xTimerReset( pxTaskToTimeReset->xOverflowTimer, 0 );
+        xTimerReset( pxTaskToTimeReset->xOverflowTimer, portMAX_DELAY );
     }
 
     if(pxTaskToTimeReset->xOverrunTimer != NULL)
     {
-        xTimerReset( pxTaskToTimeReset->xOverrunTimer, 0 );
+        xTimerReset( pxTaskToTimeReset->xOverrunTimer, portMAX_DELAY );
     }
 }
 

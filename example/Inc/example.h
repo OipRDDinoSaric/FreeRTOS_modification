@@ -7,16 +7,17 @@
 #define EXAMPLE_H
 
 #ifndef NDEBUG
-#   define TEST_MODE 1 /*!< Determines if written tests will run. */
+#   define TEST_MODE 0 /*!< Determines if written tests will run. */
 #else
 #endif
 
 #if 1 == TEST_MODE
-#   define TIMED_TEST_SINGLE_TIMED 0 /*!< Special test that requires only one timed task. */
+#   define TIMED_TEST_SINGLE_TIMED 0 /*!< Special test that requires only one
+                                          timed task. */
 #else
 #   define EXAMPLE_DEFAULT    1
 #   define EXAMPLE_TIMED      1
-#   define EXAMPLE_REPLICATED 1
+#   define EXAMPLE_REPLICATED 0
 #endif
 
 #define LED_GREEN_Pin        GPIO_PIN_12
