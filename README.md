@@ -1,22 +1,55 @@
 # FreeRTOS_modification
 
-Template application with FreeRTOS redudancy modifications. This project adds replicated tasks and timed tasks to FreeRTOS.
+Template application with FreeRTOS redundancy modifications. This project adds replicated tasks and timed tasks to FreeRTOS.
 
-Project is writen using "System workbench for STM32" based on Eclipse. Tested on STM32F407G-DISC1 development board.
+Project is written using "System workbench for STM32" based on Eclipse. Tested on STM32F407G-DISC1 development board.
 
 ## How to use
 
 Use this project as a template for a new project, or just copy the third_party/FreeRTOS folder and user_app_template/Inc/FreeRTOSConfig.h to the project. To use added FreeRTOS functionality simply include FreeRTOS.h and taks.h in your source file.
 
-## Timed tasks (watchdog)
+For demonstration purposes examples are provided. All examples are contained in "example" folder. 
+File "example.h" contains configuration of what examples will be run and should the tests run instead.
 
-Timed tasks have an ability to track their own execution time. On initialization, time limit is set. If time limit is overreached error callback is called. Timed tasks make use of FreeRTOS timers.
+```C
+#ifndef NDEBUG
+#   define TEST_MODE 0 /*!< Determines if written tests will run. */
+#else
+#endif
 
-### List of relevant added functions
+#if 1 == TEST_MODE
+#   define TIMED_TEST_SINGLE_TIMED 0 /*!< Special test that requires only one
+                                          timed task. */
+#else
+#   define EXAMPLE_DEFAULT    1
+#   define EXAMPLE_TIMED      1
+#   define EXAMPLE_REPLICATED 0
+#endif
+```   
+All output is over UART2 and that can be change inside root/third_party/ndebug_printf/Src/ndebug_printf.c with define shown below.
 
+```C
+#define PRINTF_UART_HANDLE huart2
+```
+## List of all added functions
+### Timed tasks
 * [xTaskCreateTimed](#cmd_xTaskCreateTimed) : Creates a timed task.
 * [vTaskTimedReset](#cmd_vTaskTimedReset) : Resets the timer of timed task.
 * [xTimerGetTaskHandle](#cmd_xTimerGetTaskHandle) : Gets the corresponding timed task handle from the timer handle.
+### Replicated tasks
+* [xTaskCreateReplicated](#cmd_xTaskCreateReplicated) : Creates a timed task.
+* [xTaskSetCompareValue](#cmd_xTaskSetCompareValue) : Sets a compare value for the calling task.
+* [vTaskSyncAndCompare](#cmd_vTaskSyncAndCompare) : Syncronizes the replicated tasks and compares compare values.
+### General added functions
+* [xTimerPause](#cmd_xTimerPause) : Pauses the timer.
+* [xTimerPauseFromISR](#cmd_xTimerPauseFromISR) : Pauses the timer from interrupt service routine.
+* [xTimerResume](#cmd_xTimerResume) : Resumes the timer.
+* [xTimerResumeFromISR](#cmd_xTimerResumeFromISR) : Resumes the timer from interrupt service routine.
+* [xTimerIsTimerActiveFromISR](#cmd_xTimerIsTimerActiveFromISR) : Checks if timer is active from interrupt service routine.
+
+## Timed tasks
+
+Timed tasks have an ability to track their own execution time. On initialization, time limit is set. If time limit is overreached error callback is called. Timed tasks make use of FreeRTOS timers.
 
 ### Functions
 <a name="cmd_xTaskCreateTimed"></a>
@@ -157,7 +190,7 @@ void vTimedTask( void * pvParameters )
     }
 }
 ```
-
+---
 <a name="cmd_xTimerGetTaskHandle"></a>
 ```C
 TaskHandle_t xTimerGetTaskHandle( const TimerHandle_t xTimer )
@@ -181,13 +214,6 @@ Example usage:
 ## Replicated tasks (lockstep)
 
 Replicated tasks have an ability to detect errors using at least two tasks performing identical operations. Tasks are independently processed by the processor. Output variables from tasks are compared in real time. In case of discrepancy in the output variables, an error callback is called where user can process the error.
-
-
-### List of relevant added functions
-
-* [xTaskCreateReplicated](#cmd_xTaskCreateReplicated) : Creates a timed task.
-* [xTaskSetCompareValue](#cmd_xTaskSetCompareValue) : Sets a compare value for the calling task.
-* [vTaskSyncAndCompare](#cmd_vTaskSyncAndCompare) : Syncronizes the replicated tasks and compares compare values.
 
 ### Functions
 
