@@ -569,7 +569,7 @@ TaskHandle_t xTimerGetTimerDaemonTaskHandle( void ) PRIVILEGED_FUNCTION;
 #define xTimerResume( xTimer, xTicksToWait ) xTimerGenericCommand( ( xTimer ), tmrCOMMAND_RESUME, ( xTaskGetTickCount() ), NULL, ( xTicksToWait ) )
 
 // TODO document
-#define xTimerPause( xTimer, xTicksToWait ) xTimerGenericCommand( ( xTimer ), tmrCOMMAND_PAUSE, 0U, NULL, ( xTicksToWait ) )
+#define xTimerPause( xTimer, xTicksToWait ) xTimerGenericCommand( ( xTimer ), tmrCOMMAND_PAUSE, ( xTaskGetTickCount() ), NULL, ( xTicksToWait ) )
 
 /**
  * BaseType_t xTimerChangePeriod( 	TimerHandle_t xTimer,
@@ -966,7 +966,7 @@ TaskHandle_t xTimerGetTimerDaemonTaskHandle( void ) PRIVILEGED_FUNCTION;
 #define xTimerResumeFromISR( xTimer, pxHigherPriorityTaskWoken ) xTimerGenericCommand( ( xTimer ), tmrCOMMAND_RESUME_FROM_ISR, ( xTaskGetTickCountFromISR() ), ( pxHigherPriorityTaskWoken ), 0U )
 
 // TODO Document
-#define xTimerPauseFromISR( xTimer, pxHigherPriorityTaskWoken ) xTimerGenericCommand( ( xTimer ), tmrCOMMAND_PAUSE_FROM_ISR, 0U, ( pxHigherPriorityTaskWoken ), 0U )
+#define xTimerPauseFromISR( xTimer, pxHigherPriorityTaskWoken ) xTimerGenericCommand( ( xTimer ), tmrCOMMAND_PAUSE_FROM_ISR, ( xTaskGetTickCountFromISR() ), ( pxHigherPriorityTaskWoken ), 0U )
 
 
 /**

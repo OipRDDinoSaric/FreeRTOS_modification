@@ -548,13 +548,18 @@ TickType_t xTimeNow;
 
             TickType_t xExpiryTime = xTimerGetExpiryTime( ( TimerHandle_t ) pxTimer );
 
+            BaseType_t xWasTimerActive;
+
 			if( listIS_CONTAINED_WITHIN( NULL, &( pxTimer->xTimerListItem ) ) == pdFALSE ) /*lint !e961. The cast is only redundant when NULL is passed into the macro. */
 			{
-				/* The timer is in a list, remove it. */
+				/* The timer is in a list, remove it.
+				Timer can be in active timers list or overflow active timer list. */
 				( void ) uxListRemove( &( pxTimer->xTimerListItem ) );
+				xWasTimerActive = pdTRUE;
 			}
 			else
 			{
+			    xWasTimerActive = pdFALSE;
 				mtCOVERAGE_TEST_MARKER();
 			}
 
@@ -640,19 +645,28 @@ TickType_t xTimeNow;
 
                 case tmrCOMMAND_PAUSE:
                 case tmrCOMMAND_PAUSE_FROM_ISR:
-                    if( xExpiryTime >= xTimeNow )
+                    if( xWasTimerActive == pdTRUE )
                     {
-                        pxTimer->xTimeLeftInTicks = xExpiryTime - xTimeNow; /* Message value is tick count on fcn call. */
-                    }
-                    else
-                    {
-                        pxTimer->xTimeLeftInTicks = portMAX_DELAY - xTimeNow + xExpiryTime;
-                    }
+                        if( xExpiryTime >= xMessage.u.xTimerParameters.xMessageValue )
+                        {
+                            pxTimer->xTimeLeftInTicks = xExpiryTime - xMessage.u.xTimerParameters.xMessageValue; /* Message value is tick count on fcn call. */
+                        }
+                        else
+                        {
+                            pxTimer->xTimeLeftInTicks = portMAX_DELAY - xMessage.u.xTimerParameters.xMessageValue + xExpiryTime;
+                        }
 
-                    if( pxTimer->xTimeLeftInTicks > pxTimer->xTimerPeriodInTicks)
-                    {
-                        /* Sanity check failed, correct the data. */
-                        pxTimer->xTimeLeftInTicks = pxTimer->xTimerPeriodInTicks;
+                        if( 0 == pxTimer->xTimeLeftInTicks ||
+                            pxTimer->xTimeLeftInTicks > pxTimer->xTimerPeriodInTicks )
+                        {
+                            /* The timer expired before it was paused. Process it now. */
+                            pxTimer->pxCallbackFunction( ( TimerHandle_t ) pxTimer );
+                            traceTIMER_EXPIRED( pxTimer );
+
+                            pxTimer->xTimeLeftInTicks = pxTimer->xTimerPeriodInTicks;
+
+                            /* NOTE: Don't start the timer again even though auto reload could be on. */
+                        }
                     }
                     break;
 

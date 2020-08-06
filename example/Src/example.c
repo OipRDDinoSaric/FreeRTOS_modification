@@ -30,7 +30,7 @@
 /******************************************************************************/
 
 #if 1 == TEST_MODE
-#define PRIORITY_TESTS 1
+#define PRIORITY_TESTS 2
 #else
 #define PRIORITY_DEFAULT              5
 #endif
@@ -41,7 +41,7 @@ static const uint8_t freeRTOSMemoryScheme = 4;
 
 /******************************************************************************/
 
-TaskHandle_t h_task_default              = NULL;
+TaskHandle_t h_task_default = NULL;
 
 /******************************************************************************/
 
