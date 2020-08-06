@@ -382,12 +382,24 @@ BaseType_t xTaskCreateTimed( TaskFunction_t pxTaskCode,
                     void * const pvParameters,
                     UBaseType_t uxPriority,
                     TaskHandle_t * const pxCreatedTask,
-                    TickType_t xWorstRunTime,
-                    WorstTimeTimerCb_t pxTimerCallback );</pre>
+                    TickType_t xOverrunTime,
+                    WorstTimeTimerCb_t pxOverrunTimerCb,
+                    TickType_t xOverflowTime,
+                    WorstTimeTimerCb_t pxOverflowTimerCb );</pre>
 *
  * Create a new timed task and add it to the list of tasks that are ready to
- * run. Timed task will call pxTimerCallback if its runtime is greater than
- * specified by xWorstRunTime.
+ * run.
+ *
+ * Overrun timer is synchronous with the task and its counter is incremented
+ * only when timed task is in running state. Overrun callback is called from
+ * timer daemon. When timed task overruns it sends a signal to the timer daemon
+ * and when callback is called is dependent on daemon's priority. If overrun
+ * timer is not used send 0 for xOverrunTime or NULL for the callback.
+ *
+ * Overflow timer is asynchronous with the task and its counter is incremented
+ * every tick regardless of the state. Callback is called from timer daemon and
+ * its punctuality is dependent on timer daemon's priority. If overflow timer
+ * is not used send 0 for xOverflowTime or NULL for the callback.
  *
  * Internally, within the FreeRTOS implementation, tasks use two blocks of
  * memory.  The first block is used to hold the task's data structures.  The
@@ -420,12 +432,20 @@ BaseType_t xTaskCreateTimed( TaskFunction_t pxTaskCode,
  *
  * @param pvCreatedTask Used to pass back a handle by which the created task
  * can be referenced.
- * TODO Comment
- * @param xWorstRunTime Worst run time in ticks. Function creates a timer with
- * timeout specified with xWorstRunTime
  *
- * @param pxTimerCallback Pointer to the function that will be called if the
- * timer with xWorstRunTime timeout times out.
+ * @param xOverrunTime Runtime of the task after which callback will be called.
+ *
+ * @param pxOverrunTimerCb Pointer to the function that will be called if task
+ * runs longer than xOverrunTime without reseting the timed task. Overrun timer
+ * is synchronous with the task and its tick is only incremented when timed task
+ * is in running state.
+ *
+ * @param xOverflowTime Asynchronous timer time. After xOverflowTime
+ * pxOverflowTimerCb will be called.
+ *
+ * @param pxOverflowTimerCb Pointer to the function that will be called after
+ * xOverflowTime. Overflow timer is asynchronous from the task and its value is
+ * incremented every tick.
  *
  * @return pdPASS if the task was successfully created and added to a ready
  * list, otherwise an error code defined in the file projdefs.h
@@ -445,23 +465,25 @@ BaseType_t xTaskCreateTimed( TaskFunction_t pxTaskCode,
  }
 
 // Function to be called if timer overflows.
-void vTaskTimeoutCallback ( WorstTimeTimerHandle_t xTimer )
+void vTaskOverflowCallback ( WorstTimeTimerHandle_t xTimer )
 {
-    configASSERT(strncmp( pcTimerGetName( xTimer ), "WorstTimeTimer",
-                strlen( "WorstTimeTimer" ) ) != 0);
+    // Timeout callback code.
 
-#   ifndef NDEBUG
-    void * phOwnerTask = pvTimerGetTimerID( xTimer );
-    printf("Timer %s overflowed\n", pcTimerGetName( xTimer ));
-    printf("Task %s overflowed\n", pcTaskGetName( phOwnerTask ));
-#   endif
+    // Maybe task deletion is needed. Calling vTaskDelete automatically deletes
+    // the timer too. Do NOT delete the timer directly. That will cause
+    // undefined behavior when deleting the task.
+    vTaskDelete( xTimerGetTaskHandle( xTimer ) );
+}
+// Function to be called if timer overflows.
+void vTaskOverrunCallback ( WorstTimeTimerHandle_t xTimer )
+{
 
     // Timeout callback code.
 
     // Maybe task deletion is needed. Calling vTaskDelete automatically deletes
     // the timer too. Do NOT delete the timer directly. That will cause
     // undefined behavior when deleting the task.
-    vTaskDelete( pvTimerGetTimerID( xTimer ) );
+    vTaskDelete( xTimerGetTaskHandle( xTimer ) );
 }
 
  // Function that creates a task.
@@ -474,7 +496,16 @@ void vTaskTimeoutCallback ( WorstTimeTimerHandle_t xTimer )
      // must exist for the lifetime of the task, so in this case is declared static.  If it was just an
      // an automatic stack variable it might no longer exist, or at least have been corrupted, by the time
      // the new task attempts to access it.
-     xTaskCreate( vTaskCode, "NAME", STACK_SIZE, &ucParameterToPass, tskIDLE_PRIORITY, &xHandle, pdMS_TO_TICKS(1 * 1000), vTaskTimeoutCallback );
+     xTaskCreate( vTaskCode,
+                  "NAME",
+                  STACK_SIZE,
+                  &ucParameterToPass,
+                  tskIDLE_PRIORITY,
+                  &xHandle,
+                  pdMS_TO_TICKS(1 * 1000),
+                  vTaskOverrunCallback,
+                  pdMS_TO_TICKS(2 * 1000),
+                  vTaskOverflowCallback );
      configASSERT( xHandle );
 
      // Use the handle to delete the task.
@@ -497,7 +528,7 @@ void vTaskTimeoutCallback ( WorstTimeTimerHandle_t xTimer )
                         TickType_t xOverrunTime,
                         WorstTimeTimerCb_t pxOverrunTimerCb,
                         TickType_t xOverflowTime,
-                        WorstTimeTimerCb_t pxOverflowTimerCb);
+                        WorstTimeTimerCb_t pxOverflowTimerCb );
 #endif
 
 /**

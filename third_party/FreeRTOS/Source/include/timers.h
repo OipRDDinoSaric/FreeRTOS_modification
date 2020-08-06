@@ -436,9 +436,9 @@ void vTimerSetTimerID( TimerHandle_t xTimer, void *pvNewID ) PRIVILEGED_FUNCTION
  *     2) It is an expired one-shot timer that has not been restarted.
  *
  * Timers are created in the dormant state.  The xTimerStart(), xTimerReset(),
- * xTimerStartFromISR(), xTimerResetFromISR(), xTimerChangePeriod() and
- * xTimerChangePeriodFromISR() API functions can all be used to transition a timer into the
- * active state.
+ * xTimerStartFromISR(), xTimerResetFromISR(), xTimerChangePeriod(), xTimerResume
+ * and xTimerChangePeriodFromISR() API functions can all be used to transition a
+ * timer into the active state.
  *
  * @param xTimer The timer being queried.
  *
@@ -565,10 +565,78 @@ TaskHandle_t xTimerGetTimerDaemonTaskHandle( void ) PRIVILEGED_FUNCTION;
  */
 #define xTimerStop( xTimer, xTicksToWait ) xTimerGenericCommand( ( xTimer ), tmrCOMMAND_STOP, 0U, NULL, ( xTicksToWait ) )
 
-// TODO document
+/**
+ * BaseType_t xTimerResume( TimerHandle_t xTimer, TickType_t xTicksToWait );
+ *
+ * Timer functionality is provided by a timer service/daemon task.  Many of the
+ * public FreeRTOS timer API functions send commands to the timer service task
+ * through a queue called the timer command queue.  The timer command queue is
+ * private to the kernel itself and is not directly accessible to application
+ * code.  The length of the timer command queue is set by the
+ * configTIMER_QUEUE_LENGTH configuration constant.
+ *
+ * xTimerResume() resumes a timer. If timer was not running before it acts as
+ * xTimerStart. If timer saw stopped prior to the call with xTimerPause than it
+ * places a deadline in daemon task from the time timer left of and not the full
+ * period.
+ *
+ * Resuming assures timer is in running state. If the timer is not stopped,
+ * deleted, or reset in the mean time, the callback function associated with the
+ * timer will get called 'n' ticks after xTimerStart() was called, where 'n' is
+ * the time left from when last pause was called.
+ *
+ * @param xTimer The handle of the timer being resumed.
+ *
+ * @param xTicksToWait Specifies the time, in ticks, that the calling task should
+ * be held in the Blocked state to wait for the resume command to be successfully
+ * sent to the timer command queue, should the queue already be full when
+ * xTimerResume() was called.  xTicksToWait is ignored if xTimerResume() is called
+ * before the scheduler is started.
+ *
+ * @return pdFAIL will be returned if the resume command could not be sent to
+ * the timer command queue even after xTicksToWait ticks had passed.  pdPASS will
+ * be returned if the command was successfully sent to the timer command queue.
+ * When the command is actually processed will depend on the priority of the
+ * timer service/daemon task relative to other tasks in the system.  The timer
+ * service/daemon task priority is set by the configTIMER_TASK_PRIORITY
+ * configuration constant.
+ *
+ */
 #define xTimerResume( xTimer, xTicksToWait ) xTimerGenericCommand( ( xTimer ), tmrCOMMAND_RESUME, ( xTaskGetTickCount() ), NULL, ( xTicksToWait ) )
 
-// TODO document
+/**
+ * BaseType_t xTimerPause( TimerHandle_t xTimer, TickType_t xTicksToWait );
+ *
+ * Timer functionality is provided by a timer service/daemon task.  Many of the
+ * public FreeRTOS timer API functions send commands to the timer service task
+ * through a queue called the timer command queue.  The timer command queue is
+ * private to the kernel itself and is not directly accessible to application
+ * code.  The length of the timer command queue is set by the
+ * configTIMER_QUEUE_LENGTH configuration constant.
+ *
+ * xTimerPause() pauses a timer. If timer was not running before it is ignored.
+ * Pausing remembers how many ticks until the deadline are needed and on next
+ * xTimerResume() timer will trigger only after the ticks set by pause.
+ *
+ * Pausing assures timer is in stopped state.
+ *
+ * @param xTimer The handle of the timer being paused.
+ *
+ * @param xTicksToWait Specifies the time, in ticks, that the calling task should
+ * be held in the Blocked state to wait for the stop command to be successfully
+ * sent to the timer command queue, should the queue already be full when
+ * xTimerPause() was called.  xTicksToWait is ignored if xTimerPause() is called
+ * before the scheduler is started.
+ *
+ * @return pdFAIL will be returned if the pause command could not be sent to
+ * the timer command queue even after xTicksToWait ticks had passed.  pdPASS will
+ * be returned if the command was successfully sent to the timer command queue.
+ * When the command is actually processed will depend on the priority of the
+ * timer service/daemon task relative to other tasks in the system.  The timer
+ * service/daemon task priority is set by the configTIMER_TASK_PRIORITY
+ * configuration constant.
+ *
+ */
 #define xTimerPause( xTimer, xTicksToWait ) xTimerGenericCommand( ( xTimer ), tmrCOMMAND_PAUSE, ( xTaskGetTickCount() ), NULL, ( xTicksToWait ) )
 
 /**
@@ -962,10 +1030,66 @@ TaskHandle_t xTimerGetTimerDaemonTaskHandle( void ) PRIVILEGED_FUNCTION;
  */
 #define xTimerStopFromISR( xTimer, pxHigherPriorityTaskWoken ) xTimerGenericCommand( ( xTimer ), tmrCOMMAND_STOP_FROM_ISR, 0, ( pxHigherPriorityTaskWoken ), 0U )
 
-// TODO Document
+/**
+ * BaseType_t xTimerResumeFromISR(  TimerHandle_t xTimer,
+ *                                  BaseType_t *pxHigherPriorityTaskWoken );
+ *
+ * A version of xTimerResume() that can be called from an interrupt service
+ * routine.
+ *
+ * @param xTimer The handle of the timer being resumed.
+ *
+ * @param pxHigherPriorityTaskWoken The timer service/daemon task spends most
+ * of its time in the Blocked state, waiting for messages to arrive on the timer
+ * command queue.  Calling xTimerStopFromISR() writes a message to the timer
+ * command queue, so has the potential to transition the timer service/daemon
+ * task out of the Blocked state.  If calling xTimerResumeFromISR() causes the
+ * timer service/daemon task to leave the Blocked state, and the timer service/
+ * daemon task has a priority equal to or greater than the currently executing
+ * task (the task that was interrupted), then *pxHigherPriorityTaskWoken will
+ * get set to pdTRUE internally within the xTimerResumeFromISR() function.  If
+ * xTimerResumeFromISR() sets this value to pdTRUE then a context switch should
+ * be performed before the interrupt exits.
+ *
+ * @return pdFAIL will be returned if the resume command could not be sent to
+ * the timer command queue.  pdPASS will be returned if the command was
+ * successfully sent to the timer command queue.  When the command is actually
+ * processed will depend on the priority of the timer service/daemon task
+ * relative to other tasks in the system.  The timer service/daemon task
+ * priority is set by the configTIMER_TASK_PRIORITY configuration constant.
+ *
+ */
 #define xTimerResumeFromISR( xTimer, pxHigherPriorityTaskWoken ) xTimerGenericCommand( ( xTimer ), tmrCOMMAND_RESUME_FROM_ISR, ( xTaskGetTickCountFromISR() ), ( pxHigherPriorityTaskWoken ), 0U )
 
-// TODO Document
+/**
+ * BaseType_t xTimerPauseFromISR(  TimerHandle_t xTimer,
+ *                                  BaseType_t *pxHigherPriorityTaskWoken );
+ *
+ * A version of xTimerPause() that can be called from an interrupt service
+ * routine.
+ *
+ * @param xTimer The handle of the timer being paused.
+ *
+ * @param pxHigherPriorityTaskWoken The timer service/daemon task spends most
+ * of its time in the Blocked state, waiting for messages to arrive on the timer
+ * command queue.  Calling xTimerPauseFromISR() writes a message to the timer
+ * command queue, so has the potential to transition the timer service/daemon
+ * task out of the Blocked state.  If calling xTimerPauseFromISR() causes the
+ * timer service/daemon task to leave the Blocked state, and the timer service/
+ * daemon task has a priority equal to or greater than the currently executing
+ * task (the task that was interrupted), then *pxHigherPriorityTaskWoken will
+ * get set to pdTRUE internally within the xTimerPauseFromISR() function.  If
+ * xTimerPauseFromISR() sets this value to pdTRUE then a context switch should
+ * be performed before the interrupt exits.
+ *
+ * @return pdFAIL will be returned if the pause command could not be sent to
+ * the timer command queue.  pdPASS will be returned if the command was
+ * successfully sent to the timer command queue.  When the command is actually
+ * processed will depend on the priority of the timer service/daemon task
+ * relative to other tasks in the system.  The timer service/daemon task
+ * priority is set by the configTIMER_TASK_PRIORITY configuration constant.
+ *
+ */
 #define xTimerPauseFromISR( xTimer, pxHigherPriorityTaskWoken ) xTimerGenericCommand( ( xTimer ), tmrCOMMAND_PAUSE_FROM_ISR, ( xTaskGetTickCountFromISR() ), ( pxHigherPriorityTaskWoken ), 0U )
 
 
@@ -1128,7 +1252,23 @@ TaskHandle_t xTimerGetTimerDaemonTaskHandle( void ) PRIVILEGED_FUNCTION;
  */
 #define xTimerResetFromISR( xTimer, pxHigherPriorityTaskWoken ) xTimerGenericCommand( ( xTimer ), tmrCOMMAND_RESET_FROM_ISR, ( xTaskGetTickCountFromISR() ), ( pxHigherPriorityTaskWoken ), 0U )
 
-// TODO Document
+/**
+ * BaseType_t xTimerIsTimerActiveFromISR( TimerHandle_t xTimer );
+ *
+ * A version of xTimerIsTimerActive() that can be called from an interrupt service
+ * routine.
+ *
+ * @param xTimer The handle of the timer that is to be checked.
+ *
+ * @return pdFAIL will be returned if the reset command could not be sent to
+ * the timer command queue.  pdPASS will be returned if the command was
+ * successfully sent to the timer command queue.  When the command is actually
+ * processed will depend on the priority of the timer service/daemon task
+ * relative to other tasks in the system, although the timers expiry time is
+ * relative to when xTimerResetFromISR() is actually called.  The timer service/daemon
+ * task priority is set by the configTIMER_TASK_PRIORITY configuration constant.
+ *
+ */
 BaseType_t xTimerIsTimerActiveFromISR( TimerHandle_t xTimer ) PRIVILEGED_FUNCTION;
 
 /**
