@@ -40,6 +40,15 @@ bool ndebug_printf_unlock();
 int	ndebug_printf(const char *format, ...);
 
 /**
+ * @brief Thread safe printf for debugging, adds current tick to the front.
+ *
+ * @note When NDEBUG is defined it ignores the message.
+ *
+ * @return If successful, the total number of characters written is returned.
+ *         On failure, a negative number is returned.
+ */
+int ndebug_printf_w_ticks(const char *format, ...);
+/**
  * @brief Thread safe printf for debugging.
  *
  * @note When NDEBUG is defined it ignores the message.

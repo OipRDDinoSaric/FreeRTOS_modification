@@ -114,8 +114,8 @@ void example_replicated_start(void)
 
 uint8_t task_redun_recov_ok_cb(CompareValue_t * compare_values, uint8_t len)
 {
-    ndebug_printf("Task \"Repl recov ok\" is not OK\n"
-                  "Task \"Repl recov ok\" deleting itself\n");
+    ndebug_printf_w_ticks("Task \"Repl recov ok\" is not OK\n"
+                          "Task \"Repl recov ok\" deleting itself\n");
     return pdTRUE;
 }
 
@@ -123,8 +123,8 @@ void task_redun_recov_ok(void * unused)
 {
     while(true)
     {
-        ndebug_printf("Task \"%s\" is waiting for comparison.\n",
-                      pcTaskGetName(NULL));
+        ndebug_printf_w_ticks("Task \"%s\" is waiting for comparison.\n",
+                              pcTaskGetName(NULL));
 
         vTaskSyncAndCompare(&cmp_val);
         vTaskDelay(pdMS_TO_TICKS(5 * 1000));
@@ -138,7 +138,7 @@ uint8_t task_redun_recov_fail_cb(CompareValue_t * compare_values, uint8_t len)
 
     ndebug_printf_lock(portMAX_DELAY);
 
-    ndebug_printf("Task \"Repl recov fail\" compare failed.\n");
+    ndebug_printf_w_ticks("Task \"Repl recov fail\" compare failed.\n");
 
     print_cmp_values_and_deduced_result(compare_values, len);
 
@@ -163,8 +163,8 @@ void task_redun_recov_fail(void * unused)
 
             xSemaphoreGiveRecursive(h_mtx_offset_recov);
 
-            ndebug_printf("Task \"%s\" is waiting for comparison.\n",
-                          pcTaskGetName(NULL));
+            ndebug_printf_w_ticks("Task \"%s\" is waiting for comparison.\n",
+                                  pcTaskGetName(NULL));
 
             vTaskSyncAndCompare(&cmp_val_fail);
             vTaskDelay(pdMS_TO_TICKS(5 * 1000));
@@ -176,8 +176,8 @@ void task_redun_recov_fail(void * unused)
 
 uint8_t task_redun_nrecov_ok_cb(CompareValue_t * compare_values, uint8_t len)
 {
-    ndebug_printf("Task \"Repl non-recov ok\" is not OK\n"
-                  "Task \"Repl non-recov ok\" deleting itself\n");
+    ndebug_printf_w_ticks("Task \"Repl non-recov ok\" is not OK\n"
+                          "Task \"Repl non-recov ok\" deleting itself\n");
     return pdTRUE;
 }
 
@@ -186,8 +186,8 @@ void task_redun_nrecov_ok(void * unused)
     vTaskDelay(pdMS_TO_TICKS(2 * 1000));
     while(true)
     {
-        ndebug_printf("Task \"%s\" is waiting for comparison.\n",
-                      pcTaskGetName(NULL));
+        ndebug_printf_w_ticks("Task \"%s\" is waiting for comparison.\n",
+                              pcTaskGetName(NULL));
 
         vTaskSyncAndCompare(&cmp_val);
         vTaskDelay(pdMS_TO_TICKS(5 * 1000));
@@ -200,7 +200,7 @@ uint8_t task_redun_nrecov_fail_cb(CompareValue_t * compare_values, uint8_t len)
 {
     ndebug_printf_lock(portMAX_DELAY);
 
-    ndebug_printf("Task \"Repl non-recov fail\" compare failed.\n");
+    ndebug_printf_w_ticks("Task \"Repl non-recov fail\" compare failed.\n");
 
     print_cmp_values_and_deduced_result(compare_values, len);
 
@@ -226,8 +226,8 @@ void task_redun_nrecov_fail(void * unused)
 
             xSemaphoreGiveRecursive(h_mtx_offset_nrecov);
 
-            ndebug_printf("Task \"%s\" is waiting for comparison.\n",
-                          pcTaskGetName(NULL));
+            ndebug_printf_w_ticks("Task \"%s\" is waiting for comparison.\n",
+                                  pcTaskGetName(NULL));
 
             vTaskSyncAndCompare(&cmp_val_fail);
             vTaskDelay(pdMS_TO_TICKS(5 * 1000));
@@ -239,12 +239,12 @@ void task_redun_nrecov_fail(void * unused)
 static void print_cmp_values_and_deduced_result(CompareValue_t * compare_values,
                                                 uint8_t len)
 {
-    ndebug_printf("Compare values are: ");
+    ndebug_printf_w_ticks("Compare values are: ");
     for(uint8_t iii = 0; iii < len; iii++)
     {
-        ndebug_printf("%lu ", compare_values[iii]);
+        ndebug_printf_w_ticks("%lu ", compare_values[iii]);
     }
-    ndebug_printf("\n");
+    ndebug_printf_w_ticks("\n");
 
     CompareValue_t result;
     bool           is_recoverable = false;
@@ -265,11 +265,11 @@ static void print_cmp_values_and_deduced_result(CompareValue_t * compare_values,
 print_result:
     if(is_recoverable)
     {
-        ndebug_printf("Deduced result is %lu.\n", result);
+        ndebug_printf_w_ticks("Deduced result is %lu.\n", result);
     }
     else
     {
-        ndebug_printf("Result could not be deduced.\n");
+        ndebug_printf_w_ticks("Result could not be deduced.\n");
     }
 }
 /****END OF FILE****/

@@ -97,7 +97,7 @@ void task_default(void * unused)
 {
     while(true)
     {
-        ndebug_printf("Task \"%s\" says hello world!\n", pcTaskGetName(NULL));
+        ndebug_printf_w_ticks("Task \"%s\" says hello world!\n", pcTaskGetName(NULL));
         vTaskDelay(pdMS_TO_TICKS(5 * 1000));
     }
 }

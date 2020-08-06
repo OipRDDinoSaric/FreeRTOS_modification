@@ -613,6 +613,7 @@ static void prvInitialiseNewTask(   TaskFunction_t pxTaskCode,
  * Called after a new task has been created and initialised to place the task
  * under the control of the scheduler.
  */
+static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB ) PRIVILEGED_FUNCTION;
 #if( INCLUDE_xTaskCreateTimed == 1 )
     /*
      * Increments the overrun tick of the current TCB.

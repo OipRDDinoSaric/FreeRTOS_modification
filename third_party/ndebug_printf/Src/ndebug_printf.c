@@ -75,6 +75,27 @@ int	ndebug_printf(const char *format, ...)
 #endif
 }
 
+/******************************************************************************/
+
+int ndebug_printf_w_ticks(const char *format, ...)
+{
+#ifndef NDEBUG
+    va_list args;
+
+    ndebug_printf_lock(portMAX_DELAY);
+
+    printf("%lu:", xTaskGetTickCount());
+
+    va_start(args, format);
+    int retval = do_print(portMAX_DELAY, format, args);
+    va_end(args);
+
+    ndebug_printf_unlock();
+    return retval;
+#else
+    return -1;
+#endif
+}
 
 /******************************************************************************/
 
