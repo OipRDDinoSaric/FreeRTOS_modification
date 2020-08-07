@@ -51,6 +51,12 @@ All output is over UART2 and that can be change inside root/third_party/ndebug_p
 
 Timed tasks have an ability to track their own execution time. On initialization, time limit is set. If time limit is overreached error callback is called. Timed tasks make use of FreeRTOS timers.
 
+### Limitations
+
+Static create of the functions is not available and is not planed to be implemented because of lack of time.
+
+Timer callback functions are called by the timer daemon and its priority determines when the callback will be called. It is recommended that timer deamon has the highest priority.
+
 ### Functions
 <a name="cmd_xTaskCreateTimed"></a>
 ```C
@@ -243,6 +249,12 @@ Example usage:
 ## Replicated tasks (lockstep)
 
 Replicated tasks have an ability to detect errors using at least two tasks performing identical operations. Tasks are independently processed by the processor. Output variables from tasks are compared in real time. In case of discrepancy in the output variables, an error callback is called where user can process the error.
+
+### Limitations
+
+Static create of the functions is not available and is not planed to be implemented because of lack of time.
+
+Timer callback functions are called by the timer daemon and its priority determines when the callback will be called. It is recommended that timer deamon has the highest priority.
 
 ### Functions
 
