@@ -37,10 +37,11 @@ All output is over UART2 and that can be change inside root/third_party/ndebug_p
 * [vTaskTimedReset](#cmd_vTaskTimedReset) : Resets the timer of timed task.
 * [xTimerGetTaskHandle](#cmd_xTimerGetTaskHandle) : Gets the corresponding timed task handle from the timer handle.
 ### Replicated tasks
-* [xTaskCreateReplicated](#cmd_xTaskCreateReplicated) : Creates a timed task.
+* [xTaskCreateReplicated](#cmd_xTaskCreateReplicated) : Creates a replicated task.
 * [xTaskSetCompareValue](#cmd_xTaskSetCompareValue) : Sets a compare value for the calling task.
 * [vTaskSyncAndCompare](#cmd_vTaskSyncAndCompare) : Syncronizes the replicated tasks and compares compare values.
 ### General added functions
+* [eTaskGetType](#cmd_eTaskGetType) : Gets the type of the task.
 * [xTimerPause](#cmd_xTimerPause) : Pauses the timer.
 * [xTimerPauseFromISR](#cmd_xTimerPauseFromISR) : Pauses the timer from interrupt service routine.
 * [xTimerResume](#cmd_xTimerResume) : Resumes the timer.
@@ -253,8 +254,6 @@ Replicated tasks have an ability to detect errors using at least two tasks perfo
 ### Limitations
 
 Static create of the functions is not available and is not planed to be implemented because of lack of time.
-
-Timer callback functions are called by the timer daemon and its priority determines when the callback will be called. It is recommended that timer deamon has the highest priority.
 
 ### Functions
 
